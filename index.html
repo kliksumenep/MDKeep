@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MD Keep — AI Workbench Offline</title>
+<title>MD Keep</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c96f4a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MD Keep">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <style>
   /* =====================================================================
@@ -124,6 +131,8 @@
   .btn-primary { background: var(--brand-primary); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
   .btn-primary:hover { opacity: 0.9; }
   .btn-primary:disabled { opacity: 0.45; cursor: default; }
+  .btn-outline-danger { background: #fff; color: var(--sys-danger); border: 1.5px solid var(--sys-danger); display: inline-flex; align-items: center; gap: 6px; }
+  .btn-outline-danger:hover { background: var(--sys-danger-tint); }
   .btn-ghost { background: transparent; color: var(--brand-ink-soft); display: inline-flex; align-items: center; gap: 6px; }
   .btn-ghost:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
   .btn-danger { background: var(--sys-danger); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
@@ -169,7 +178,8 @@
   .folders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .folder-card { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 16px 14px; box-shadow: var(--shadow-xs); cursor: pointer; position: relative; }
   .folder-card:hover { border-color: var(--brand-primary-soft); }
-  .folder-card .icon { font-size: 22px; color: var(--brand-primary); }
+  .folder-card .icon { width: 26px; height: 26px; }
+  .folder-card .icon svg { display: block; width: 100%; height: 100%; }
   .folder-card .name { font-size: 14px; font-weight: 700; margin-top: 8px; word-break: break-word; padding-right: 20px; }
   .folder-card .count { font-size: 11.5px; color: var(--brand-ink-soft); margin-top: 4px; }
   .folder-menu-btn { position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--brand-ink-soft); width: 26px; height: 26px; border-radius: 7px; padding: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
@@ -356,6 +366,7 @@
   .modal-new-folder input { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--sys-line); font-size: 13px; background: var(--brand-paper); color: var(--brand-ink); }
   .modal-new-folder input:focus { outline: 2px solid var(--brand-primary-tint); }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  #previewModal .modal-list { border-top: 1px solid var(--sys-line); border-bottom: 1px solid var(--sys-line); padding: 10px 2px; }
 
   /* ---------- Markdown preview modal content ---------- */
   #previewModal { width: min(560px, calc(100vw - 32px)); height: auto; max-height: 82vh; }
@@ -418,7 +429,7 @@
           <button class="active" data-view="card" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
           <button data-view="list" title="List view"><i class="bi bi-list-ul"></i></button>
         </div>
-        <button class="btn-primary" id="newFolderBtn"><i class="bi bi-folder-plus"></i> Folder Baru</button>
+        <button class="btn-outline-danger" id="newFolderBtn"><i class="bi bi-folder-plus"></i> Folder Baru</button>
       </div>
     </div>
     <button class="trash-entry" id="trashEntryBtn"><i class="bi bi-trash3"></i> Sampah <span class="count-badge" id="trashCountBadge">0</span></button>
@@ -612,6 +623,12 @@
 <script>
 // Catatan: fitur Sync butuh koneksi internet untuk memuat library ini pertama kali.
 // Semua fitur lain (capture, edit, folder, dst) tetap 100% jalan offline seperti biasa.
+// Icon folder dua warna (kuning + aksen merah dikit di belakang)
+const FOLDER_ICON_SVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M2 5a1 1 0 011-1h5.2l1.8 1.8H21a1 1 0 011 1V9H2z" fill="#c96f4a"/>
+  <path d="M2 8.4h20a1 1 0 011 1V18a1 1 0 01-1 1H3a1 1 0 01-1-1z" fill="#f5c451"/>
+</svg>`;
+
 const DB_NAME = 'mdkeep';
 const DB_VERSION = 3;
 const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 hari
@@ -876,7 +893,7 @@ async function refreshFolders() {
       card.className = 'folder-card';
       card.innerHTML = `
         <button class="folder-menu-btn" title="Menu folder"><i class="bi bi-three-dots-vertical"></i></button>
-        <div class="icon"><i class="bi bi-folder-fill"></i></div>
+        <div class="icon">${FOLDER_ICON_SVG}</div>
         <div class="name">${escapeHtml(folder.name)}</div>
         <div class="count">${count} file · ${formatUpdatedRelative(lastUpdated)}</div>
       `;
@@ -2060,6 +2077,19 @@ async function runSync(client) {
     showToast('Gagal memuat data — cek console (F12)');
   }
 })();
+</script>
+
+<script>
+  // Daftarkan service worker biar app bisa kebuka offline total dari shortcut.
+  // Gagal daftar (mis. dibuka dari file:// atau browser lama) tidak boleh
+  // menghentikan app — cukup dicatat di console.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.warn('Service worker gagal didaftarkan:', err);
+      });
+    });
+  }
 </script>
 
 </body>
