@@ -213,6 +213,7 @@
   .composer textarea:focus { outline: none; }
 
   .composer-toolbar { border-top: 1px solid var(--sys-line); background: var(--brand-paper); margin: 14px -14px -14px; padding: 10px 14px 12px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .composer-type-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--brand-primary-deep); background: var(--brand-primary-tint); padding: 4px 10px; border-radius: 20px; margin-bottom: 8px; }
   .autosave-status { font-size: 11px; color: var(--brand-ink-soft); display: flex; align-items: center; gap: 5px; min-height: 14px; }
   .autosave-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-ink-soft); flex-shrink: 0; }
   .autosave-status.saved .dot { background: var(--sys-success); }
@@ -435,6 +436,7 @@
     </div>
 
     <div class="composer" style="margin-top:14px;">
+      <div class="composer-type-badge" id="composerTypeBadge"><i class="bi bi-file-earmark-text"></i> Catatan</div>
       <input type="text" id="noteTitle" placeholder="Judul file…" />
       <textarea id="noteBody" placeholder="Tempel atau tulis markdown di sini…"></textarea>
 
@@ -502,11 +504,11 @@
   <p class="sheet-title">Tangkap cepat</p>
   <div class="sheet-options">
     <button class="sheet-option" data-type="catatan"><i class="bi bi-file-earmark-text"></i>Catatan</button>
-    <button class="sheet-option" data-type="ide" disabled><i class="bi bi-lightbulb"></i>Ide</button>
+    <button class="sheet-option" data-type="ide"><i class="bi bi-lightbulb"></i>Ide</button>
     <button class="sheet-option" data-type="prompt" disabled><i class="bi bi-robot"></i>Prompt</button>
     <button class="sheet-option" data-type="decision" disabled><i class="bi bi-lock"></i>Decision</button>
     <button class="sheet-option" data-type="bug" disabled><i class="bi bi-bug"></i>Bug</button>
-    <button class="sheet-option" data-type="task" disabled><i class="bi bi-check2-square"></i>Task</button>
+    <button class="sheet-option" data-type="task"><i class="bi bi-check2-square"></i>Task</button>
   </div>
 </div>
 
@@ -1185,11 +1187,12 @@ async function refreshNotes(filter = '') {
   filtered.forEach(note => {
     const div = document.createElement('div');
     div.className = 'note';
+    const meta = noteTypeMeta(note.type);
     div.innerHTML = `
       <div class="note-actions">
         <button class="icon-btn" data-action="menu" title="Menu"><i class="bi bi-three-dots-vertical"></i></button>
       </div>
-      <h3><i class="bi bi-file-earmark-text"></i>${escapeHtml(note.title || 'Tanpa judul')}</h3>
+      <h3><i class="bi ${meta.icon}"></i>${escapeHtml(note.title || 'Tanpa judul')}</h3>
       <pre>${escapeHtml(note.body)}</pre>
       <div class="meta">${formatDate(note.updatedAt)}</div>
     `;
@@ -1217,11 +1220,31 @@ function editNote(note) {
   document.getElementById('noteTitle').value = note.title;
   document.getElementById('noteBody').value = note.body;
   document.getElementById('saveBtn').textContent = 'Perbarui';
+  setComposerType(note.type || 'catatan');
   resetComposerHistory();
   setAutosaveStatus('saved', note.updatedAt);
   updateViewMdVisibility();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('noteTitle').focus();
+}
+
+// ---------- Note types (Quick Capture) ----------
+const NOTE_TYPE_META = {
+  catatan: { icon: 'bi-file-earmark-text', label: 'Catatan', titlePlaceholder: 'Judul file…', bodyPlaceholder: 'Tempel atau tulis markdown di sini…' },
+  ide:     { icon: 'bi-lightbulb',         label: 'Ide',     titlePlaceholder: 'Judul ide…',   bodyPlaceholder: 'Tulis ide kamu di sini…' },
+  task:    { icon: 'bi-check2-square',     label: 'Task',    titlePlaceholder: 'Nama task…',   bodyPlaceholder: 'Detail task, langkah, atau catatan tambahan…' },
+};
+function noteTypeMeta(type) { return NOTE_TYPE_META[type] || NOTE_TYPE_META.catatan; }
+let currentComposerType = 'catatan';
+function setComposerType(type) {
+  currentComposerType = NOTE_TYPE_META[type] ? type : 'catatan';
+  const meta = noteTypeMeta(currentComposerType);
+  const badge = document.getElementById('composerTypeBadge');
+  if (badge) badge.innerHTML = `<i class="bi ${meta.icon}"></i> ${meta.label}`;
+  const titleEl = document.getElementById('noteTitle');
+  const bodyEl = document.getElementById('noteBody');
+  if (titleEl) titleEl.placeholder = meta.titlePlaceholder;
+  if (bodyEl) bodyEl.placeholder = meta.bodyPlaceholder;
 }
 
 // ---------- Composer: persist / autosave ----------
@@ -1258,6 +1281,7 @@ async function persistComposer({ toast = false } = {}) {
     folderId: currentFolderId,
     title: title || 'Tanpa judul',
     body,
+    type: existing ? (existing.type || 'catatan') : currentComposerType,
     updatedAt: now,
     createdAt: existing ? existing.createdAt : now
   };
@@ -1270,11 +1294,12 @@ async function persistComposer({ toast = false } = {}) {
   return note;
 }
 
-function clearComposer() {
+function clearComposer(type = 'catatan') {
   document.getElementById('noteTitle').value = '';
   document.getElementById('noteBody').value = '';
   document.getElementById('saveBtn').textContent = 'Simpan';
   currentEditId = null;
+  setComposerType(type);
   resetComposerHistory();
   setAutosaveStatus('idle');
   updateViewMdVisibility();
@@ -1832,14 +1857,14 @@ document.querySelectorAll('.sheet-option').forEach(btn => {
     if (btn.disabled) return;
     const type = btn.dataset.type;
     closeSheet();
-    if (type === 'catatan') {
+    if (type === 'catatan' || type === 'ide' || type === 'task') {
       if (currentFolderId === null) {
         showToast('Pilih atau buat folder dulu untuk menyimpan file');
         showTab('projects');
         return;
       }
       showTab('projects');
-      clearComposer();
+      clearComposer(type);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       document.getElementById('noteTitle').focus();
     }
