@@ -2000,44 +2000,56 @@ document.getElementById('syncNowBtn').addEventListener('click', async () => {
 
 async function runSync(client) {
   const code = getSyncCode();
-  const lastSynced = getLastSyncedAt();
   const syncStartedAt = Date.now();
   let pulled = 0, pushed = 0;
 
-  // 1. Tarik perubahan dari server sejak sync terakhir
+  // Tarik SEMUA data workspace ini dari server (bukan cuma yang "baru" menurut
+  // jam device) — dibanding satu per satu id, biar tidak ada yang kelewat
+  // gara-gara jam HP/PC meleset.
   const { data: remoteFolders, error: fErr } = await client
-    .from('mdk_folders').select('*').eq('workspace_id', code).gt('updated_at', lastSynced);
+    .from('mdk_folders').select('*').eq('workspace_id', code);
   if (fErr) throw fErr;
   const { data: remoteNotes, error: nErr } = await client
-    .from('mdk_notes').select('*').eq('workspace_id', code).gt('updated_at', lastSynced);
+    .from('mdk_notes').select('*').eq('workspace_id', code);
   if (nErr) throw nErr;
 
   const localFolders = await getAll('folders');
   const localNotes = await getAll('notes');
+  const remoteFolderMap = new Map((remoteFolders || []).map(f => [f.id, f]));
+  const remoteNoteMap = new Map((remoteNotes || []).map(n => [n.id, n]));
   const localFolderMap = new Map(localFolders.map(f => [f.id, f]));
   const localNoteMap = new Map(localNotes.map(n => [n.id, n]));
 
-  // 2. Gabung ke lokal — last-write-wins berdasarkan updatedAt
+  // 1. Tarik ke lokal — ambil versi server kalau lokal belum punya, atau
+  // server lebih baru (last-write-wins berdasarkan updatedAt masing-masing record)
   for (const rf of (remoteFolders || [])) {
     const local = localFolderMap.get(rf.id);
-    if (!local || rf.updated_at >= local.updatedAt) {
+    if (!local || rf.updated_at > local.updatedAt) {
       await put('folders', { id: rf.id, name: rf.name, createdAt: rf.created_at, updatedAt: rf.updated_at, deletedAt: rf.deleted_at });
       pulled++;
     }
   }
   for (const rn of (remoteNotes || [])) {
     const local = localNoteMap.get(rn.id);
-    if (!local || rn.updated_at >= local.updatedAt) {
+    if (!local || rn.updated_at > local.updatedAt) {
       await put('notes', { id: rn.id, folderId: rn.folder_id, title: rn.title, body: rn.body, createdAt: rn.created_at, updatedAt: rn.updated_at, deletedAt: rn.deleted_at, deletedWithFolder: rn.deleted_with_folder });
       pulled++;
     }
   }
 
-  // 3. Kirim perubahan lokal yang lebih baru dari sync terakhir
-  const foldersToPush = localFolders.filter(f => f.updatedAt > lastSynced).map(f => ({
+  // 2. Kirim ke server — hanya kirim record yang lokalnya lebih baru dari
+  // versi server (atau belum ada di server sama sekali). Ini juga dibanding
+  // per-record, bukan pakai watermark waktu sync terakhir.
+  const foldersToPush = localFolders.filter(f => {
+    const rf = remoteFolderMap.get(f.id);
+    return !rf || f.updatedAt > rf.updated_at;
+  }).map(f => ({
     id: f.id, workspace_id: code, name: f.name, created_at: f.createdAt, updated_at: f.updatedAt, deleted_at: f.deletedAt || null,
   }));
-  const notesToPush = localNotes.filter(n => n.updatedAt > lastSynced).map(n => ({
+  const notesToPush = localNotes.filter(n => {
+    const rn = remoteNoteMap.get(n.id);
+    return !rn || n.updatedAt > rn.updated_at;
+  }).map(n => ({
     id: n.id, workspace_id: code, folder_id: n.folderId, title: n.title, body: n.body,
     created_at: n.createdAt, updated_at: n.updatedAt, deleted_at: n.deletedAt || null, deleted_with_folder: !!n.deletedWithFolder,
   }));
@@ -2053,6 +2065,8 @@ async function runSync(client) {
     pushed += notesToPush.length;
   }
 
+  // lastSynced sekarang cuma dipakai buat teks "terakhir sync kapan" di UI,
+  // bukan lagi patokan data apa yang perlu ditarik/dikirim.
   setLastSyncedAt(syncStartedAt);
   return { pulled, pushed };
 }
