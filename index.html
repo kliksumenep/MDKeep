@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD Keep — AI Workbench Offline</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<style>
+  /* =====================================================================
+     DESIGN TOKENS
+     - "Brand" tokens: warna, font. Scoped via [data-brand] biar gampang
+       ganti tema — cukup tambah blok baru .mdk-app[data-brand="lain"]{...}
+       lalu ubah atribut data-brand di <body>.
+     - "Sys" tokens: warna status, radius, shadow, lebar shell. Jarang
+       berubah walau brand berganti.
+     ===================================================================== */
+  .mdk-app[data-brand="default"] {
+    --brand-primary: #c96f4a;
+    --brand-primary-deep: #a8532f;
+    --brand-primary-soft: #d98e6c;
+    --brand-primary-tint: #f4e3da;
+    --brand-ink: #2a2622;
+    --brand-ink-soft: #6b6259;
+    --brand-paper: #faf8f3;
+    --brand-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --brand-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .mdk-app {
+    --sys-success: #1f7a44;
+    --sys-success-tint: #dff3e6;
+    --sys-warning: #c98a2c;
+    --sys-warning-tint: #fbeeda;
+    --sys-danger: #b5433a;
+    --sys-danger-tint: #f8e4e1;
+    --sys-line: #e8e0d5;
+    --sys-card: #ffffff;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow-xs: 0 1px 3px rgba(40,30,20,0.08);
+    --shadow-sm: 0 4px 14px rgba(40,30,20,0.10);
+    --shadow-md: 0 10px 28px rgba(40,30,20,0.16);
+    --shadow-lg: 0 24px 48px rgba(40,30,20,0.22);
+    --shell-w: 760px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #efece3; }
+
+  .mdk-app {
+    font-family: var(--brand-font-body);
+    color: var(--brand-ink);
+    background: var(--brand-paper);
+    min-height: 100vh;
+  }
+  .mdk-app h1, .mdk-app h2, .mdk-app h3, .mdk-app p { margin: 0; }
+  .mdk-app i.bi { line-height: 1; }
+
+  /* ---------- Desktop shell concept ---------- */
+  .mdk-shell {
+    width: 100%;
+    max-width: var(--shell-w);
+    margin: 0 auto;
+    background: var(--brand-paper);
+    min-height: 100vh;
+    position: relative;
+  }
+  @media (min-width: 900px) {
+    .mdk-shell {
+      min-height: auto;
+      margin: 32px auto 48px;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg), 0 0 0 1px rgba(40,30,20,0.06);
+    }
+    .mdk-shell header { position: static !important; border-radius: 24px 24px 0 0; }
+  }
+
+  header {
+    padding: 16px 20px;
+    background: var(--sys-card);
+    border-bottom: 1px solid var(--sys-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 12px;
+  }
+  header .title-area { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(155deg, var(--brand-primary-soft), var(--brand-primary-deep));
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-xs);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; white-space: nowrap; line-height: 1.2; }
+  header .brand-sub { font-size: 10.5px; color: var(--brand-ink-soft); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+
+  #status {
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 20px;
+    background: var(--sys-success-tint);
+    color: var(--sys-success);
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #status.offline { background: #f0f0f0; color: #888; }
+
+  .container { max-width: var(--shell-w); margin: 0 auto; padding: 20px 16px 100px; }
+
+  /* Buttons */
+  button { font-family: inherit; cursor: pointer; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 14px; font-weight: 500; transition: background 0.15s, opacity 0.15s, color 0.15s; }
+  .btn-primary { background: var(--brand-primary); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.45; cursor: default; }
+  .btn-ghost { background: transparent; color: var(--brand-ink-soft); display: inline-flex; align-items: center; gap: 6px; }
+  .btn-ghost:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+  .btn-danger { background: var(--sys-danger); color: #fff; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-danger:hover { opacity: 0.9; }
+  .btn-back { background: var(--sys-card); border: 1px solid var(--sys-line); color: var(--brand-ink); padding: 7px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-back:hover { background: var(--brand-primary-tint); }
+
+  /* ---------- Motivational heading below header ---------- */
+  .workspace-heading { max-width: var(--shell-w); margin: 0 auto; padding: 16px 20px 4px; text-align: center; }
+  .workspace-heading h2 { font-size: 15px; font-weight: 700; color: var(--brand-ink); }
+  .workspace-heading p { font-size: 12.5px; color: var(--brand-ink-soft); margin-top: 3px; }
+
+  /* ---------- Workspace frame — visually ties tabs to the card/toolbox area below ---------- */
+  .workspace-frame {
+    max-width: var(--shell-w); margin: 12px auto 0;
+    border: 1px solid var(--sys-line); border-radius: var(--radius-lg);
+    background: var(--sys-card); overflow: hidden;
+  }
+  .workspace-frame .tabs { max-width: none; margin: 0; padding: 10px 12px; }
+  .workspace-frame .tabs-track { border: none; background: var(--brand-paper); }
+  .workspace-frame .container {
+    max-width: none; margin: 0; padding: 16px 16px 90px;
+    background: var(--brand-paper); border-top: 1px solid var(--sys-line);
+  }
+
+  /* ---------- Segmented tabs — kept quieter than action buttons ---------- */
+  .tabs { max-width: var(--shell-w); margin: 0 auto; padding: 12px 16px 0; }
+  .tabs-track { display: flex; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: 10px; padding: 3px; gap: 3px; }
+  .tab-btn { flex: 1; background: transparent; color: var(--brand-ink-soft); padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .tab-btn.active { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+
+  /* ---------- Breadcrumb ---------- */
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--brand-ink-soft); flex-wrap: wrap; margin-bottom: 6px; }
+  .breadcrumb .crumb-link { background: transparent; padding: 4px 6px; border-radius: 6px; color: var(--brand-ink-soft); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
+  .breadcrumb .crumb-link:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+  .breadcrumb .crumb-sep { font-size: 10px; color: var(--sys-line); }
+  .breadcrumb .crumb-current { font-weight: 700; color: var(--brand-ink); padding: 4px 6px; }
+
+  /* ---------- Folder grid ---------- */
+  .folder-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+  .folder-toolbar h2 { font-size: 16px; margin: 0; }
+  .folder-toolbar .fw-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .folders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .folder-card { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 16px 14px; box-shadow: var(--shadow-xs); cursor: pointer; position: relative; }
+  .folder-card:hover { border-color: var(--brand-primary-soft); }
+  .folder-card .icon { font-size: 22px; color: var(--brand-primary); }
+  .folder-card .name { font-size: 14px; font-weight: 700; margin-top: 8px; word-break: break-word; padding-right: 20px; }
+  .folder-card .count { font-size: 11.5px; color: var(--brand-ink-soft); margin-top: 4px; }
+  .folder-menu-btn { position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--brand-ink-soft); width: 26px; height: 26px; border-radius: 7px; padding: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+  @media (hover: hover) { .folder-card:hover .folder-menu-btn { opacity: 1; } }
+  .folder-menu-btn:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+  .folder-menu-btn.pressed { opacity: 1; background: var(--brand-primary-tint); }
+
+  /* ---------- Sampah (Trash) ---------- */
+  .trash-entry {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    padding: 10px 12px; border-radius: var(--radius-md);
+    border: 1px dashed var(--sys-line); color: var(--brand-ink-soft);
+    font-size: 13px; font-weight: 600; cursor: pointer; background: transparent;
+  }
+  .trash-entry:hover { background: var(--sys-danger-tint); color: var(--sys-danger); border-color: var(--sys-danger); }
+  .trash-entry .count-badge { margin-left: auto; font-weight: 700; }
+  .trash-item {
+    background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-md);
+    padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .trash-item i.bi.type-icon { font-size: 16px; color: var(--brand-ink-soft); flex-shrink: 0; }
+  .trash-item .info { flex: 1; min-width: 0; }
+  .trash-item .title { font-weight: 700; font-size: 14px; word-break: break-word; }
+  .trash-item .meta { font-size: 11.5px; color: var(--brand-ink-soft); margin-top: 2px; }
+  .trash-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+  /* ---------- Composer / editor ---------- */
+  .composer { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 24px; box-shadow: var(--shadow-xs); }
+  .composer input[type="text"] {
+    width: 100%; border: none; font-size: 16px; font-weight: 700;
+    padding: 4px 2px 12px; margin-bottom: 10px;
+    background: transparent; color: var(--brand-ink);
+    border-bottom: 1px solid var(--sys-line);
+  }
+  .composer input[type="text"]:focus { outline: none; border-bottom-color: var(--brand-primary-soft); }
+  .composer textarea {
+    width: 100%; height: 260px; max-height: 55vh; resize: vertical; overflow-y: auto;
+    border: none; font-size: 14px; font-family: "SF Mono", Consolas, monospace;
+    padding: 4px 2px; background: transparent; color: var(--brand-ink); line-height: 1.55;
+  }
+  .composer textarea:focus { outline: none; }
+
+  .composer-toolbar { border-top: 1px solid var(--sys-line); background: var(--brand-paper); margin: 14px -14px -14px; padding: 10px 14px 12px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .autosave-status { font-size: 11px; color: var(--brand-ink-soft); display: flex; align-items: center; gap: 5px; min-height: 14px; }
+  .autosave-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-ink-soft); flex-shrink: 0; }
+  .autosave-status.saved .dot { background: var(--sys-success); }
+  .autosave-status.saving .dot { background: var(--sys-warning); }
+  .composer-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .composer-toolbar-icons { display: flex; gap: 3px; flex-wrap: wrap; }
+  .composer-toolbar-main { display: flex; gap: 8px; margin-left: auto; }
+
+  .icon-btn {
+    background: var(--sys-card); border: 1px solid var(--sys-line);
+    width: 30px; height: 30px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; padding: 0; font-size: 14px;
+    color: var(--brand-ink-soft);
+  }
+  .icon-btn:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); border-color: var(--brand-primary-soft); }
+  .icon-btn:disabled { opacity: 0.4; cursor: default; }
+  .icon-btn:disabled:hover { background: var(--sys-card); color: var(--brand-ink-soft); border-color: var(--sys-line); }
+  /* Varian icon-btn tapi lebar mengikuti teks (dipakai untuk "Save As") */
+  .icon-btn-text { width: auto; padding: 0 12px; font-size: 13px; font-weight: 600; }
+
+  /* Notes list */
+  .notes-grid { display: flex; flex-direction: column; gap: 12px; }
+  .note { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 14px 16px; box-shadow: var(--shadow-xs); cursor: pointer; position: relative; }
+  .note h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; padding-right: 40px; display: flex; align-items: center; gap: 7px; }
+  .note h3 i { color: var(--brand-primary); font-size: 13px; flex-shrink: 0; }
+  .note pre {
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    font-family: "SF Mono", Consolas, monospace; font-size: 13px; color: var(--brand-ink-soft); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .note .meta { margin-top: 10px; font-size: 11px; color: #a89f92; }
+  .note .note-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+
+  .empty { text-align: center; color: var(--brand-ink-soft); padding: 60px 20px; font-size: 14px; }
+  .empty i { font-size: 26px; display: block; margin-bottom: 10px; opacity: .5; }
+  .search-bar { margin-bottom: 16px; position: relative; }
+  .search-bar i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--brand-ink-soft); font-size: 13px; }
+  .search-bar input { width: 100%; padding: 10px 14px 10px 34px; border-radius: 10px; border: 1px solid var(--sys-line); font-size: 14px; background: var(--sys-card); color: var(--brand-ink); }
+  .search-bar input:focus { outline: 2px solid var(--brand-primary-tint); }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--brand-ink); color: white; padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 100;
+    display: flex; align-items: center; gap: 8px; max-width: 88%; text-align: left;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+
+  .hidden { display: none !important; }
+
+  /* ---------- View toggle (Card / List) ---------- */
+  .view-toggle { display: flex; border: 1px solid var(--sys-line); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .view-toggle button { background: var(--sys-card); color: var(--brand-ink-soft); border-radius: 0; padding: 7px 10px; font-size: 14px; }
+  .view-toggle button.active { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+
+  /* List-mode variants (folders + notes) */
+  .folders-grid.list-mode { display: flex; flex-direction: column; gap: 8px; }
+  .folders-grid.list-mode .folder-card { display: flex; align-items: center; gap: 12px; padding: 10px 44px 10px 14px; }
+  .folders-grid.list-mode .folder-card .name { margin-top: 0; padding-right: 0; }
+  .folders-grid.list-mode .folder-card .count { margin-top: 0; margin-left: auto; white-space: nowrap; }
+  .folders-grid.list-mode .folder-menu-btn { position: absolute; opacity: 1; }
+
+  .notes-grid.list-mode .note { padding: 10px 14px; }
+  .notes-grid.list-mode .note pre { -webkit-line-clamp: 1; }
+
+  /* ---------- Toolbox ---------- */
+  .toolbox-section { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); margin-bottom: 12px; box-shadow: var(--shadow-xs); overflow: hidden; }
+  .toolbox-header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: transparent; color: var(--brand-ink); border-radius: 0; font-size: 14px; font-weight: 700; }
+  .toolbox-header .chev { color: var(--brand-ink-soft); transition: transform 0.15s; font-size: 12px; }
+  .toolbox-section.open .toolbox-header .chev { transform: rotate(90deg); }
+  .toolbox-items { display: none; padding: 0 10px 10px; }
+  .toolbox-section.open .toolbox-items { display: block; }
+  .toolbox-item { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 8px; font-size: 13.5px; color: var(--brand-ink); cursor: pointer; }
+  .toolbox-item:hover { background: var(--brand-primary-tint); }
+  .toolbox-item i.bi { font-size: 15px; width: 18px; text-align: center; color: var(--brand-primary); flex-shrink: 0; }
+  .toolbox-item .soon { margin-left: auto; font-size: 10.5px; color: var(--brand-ink-soft); background: var(--brand-paper); border: 1px solid var(--sys-line); padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+
+  /* ---------- FAB (centered to shell width on desktop) ---------- */
+  .fab-zone { position: fixed; left: 0; right: 0; bottom: 24px; display: flex; justify-content: center; pointer-events: none; z-index: 50; }
+  .fab-zone-in { width: 100%; max-width: var(--shell-w); position: relative; pointer-events: none; }
+  .fab {
+    position: absolute; right: 20px; bottom: 0; pointer-events: auto;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--brand-primary); color: #fff; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(201,111,74,0.4); padding: 0; line-height: 1;
+  }
+  .fab:hover { opacity: 0.92; }
+
+  /* ---------- Bottom sheet (shared: quick capture / note menu / folder menu) ---------- */
+  .sheet-overlay { position: fixed; inset: 0; background: rgba(30,24,18,0.35); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+  .bottom-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--sys-card);
+    border-radius: 18px 18px 0 0; padding: 10px 16px 24px; z-index: 91;
+    transform: translateY(100%); transition: transform 0.22s ease-out;
+    max-width: var(--shell-w); margin: 0 auto; box-shadow: 0 -6px 24px rgba(40,30,20,0.15);
+  }
+  .bottom-sheet.show { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--sys-line); border-radius: 4px; margin: 4px auto 14px; }
+  .sheet-title { font-size: 13px; color: var(--brand-ink-soft); font-weight: 700; margin: 0 4px 10px; }
+  .sheet-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sheet-option { background: var(--brand-paper); border: 1px solid var(--sys-line); border-radius: 12px; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 12.5px; color: var(--brand-ink); text-align: center; }
+  .sheet-option:hover { background: var(--brand-primary-tint); }
+  .sheet-option i.bi { font-size: 19px; color: var(--brand-primary); }
+  .sheet-option[disabled] { opacity: 0.45; cursor: default; }
+  .sheet-option[disabled]:hover { background: var(--brand-paper); }
+
+  .menu-list { display: flex; flex-direction: column; gap: 2px; max-height: 60vh; overflow-y: auto; }
+  .menu-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 8px; font-size: 14px; color: var(--brand-ink); cursor: pointer; background: transparent; border: none; width: 100%; text-align: left; font-family: inherit; }
+  .menu-list-item:hover { background: var(--brand-primary-tint); }
+  .menu-list-item i.bi { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; color: var(--brand-primary); }
+  .menu-list-item.danger { color: var(--sys-danger); }
+  .menu-list-item.danger i.bi { color: var(--sys-danger); }
+  .menu-list-item.danger:hover { background: var(--sys-danger-tint); }
+  .menu-divider { height: 1px; background: var(--sys-line); margin: 6px 4px; }
+
+  /* ---------- Folder picker modal ---------- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(30,24,18,0.35); z-index: 120; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.96);
+    background: var(--sys-card); border-radius: 16px; padding: 18px;
+    width: min(420px, calc(100vw - 40px)); max-height: 80vh; display: flex; flex-direction: column;
+    z-index: 121; opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .modal-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; flex: 1; }
+  .modal-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; border: 1px solid transparent; }
+  .modal-item i.bi { color: var(--brand-primary); }
+  .modal-item:hover { background: var(--brand-primary-tint); }
+  .modal-item.selected { background: var(--brand-primary-tint); border-color: var(--brand-primary); font-weight: 700; }
+  .modal-item .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--sys-line); flex-shrink: 0; position: relative; }
+  .modal-item.selected .radio { border-color: var(--brand-primary); }
+  .modal-item.selected .radio::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--brand-primary); }
+  .modal-empty { text-align: center; color: var(--brand-ink-soft); font-size: 13px; padding: 16px 8px; }
+  .modal-new-folder { display: flex; gap: 6px; margin-bottom: 12px; }
+  .modal-new-folder input { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--sys-line); font-size: 13px; background: var(--brand-paper); color: var(--brand-ink); }
+  .modal-new-folder input:focus { outline: 2px solid var(--brand-primary-tint); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ---------- Markdown preview modal content ---------- */
+  #previewModal { width: min(560px, calc(100vw - 32px)); height: auto; max-height: 82vh; }
+  .md-preview { font-size: 14px; line-height: 1.6; color: var(--brand-ink); }
+  .md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4 { margin: 14px 0 6px; line-height: 1.3; }
+  .md-preview h1:first-child, .md-preview h2:first-child, .md-preview h3:first-child { margin-top: 0; }
+  .md-preview h1 { font-size: 20px; } .md-preview h2 { font-size: 17.5px; } .md-preview h3 { font-size: 15.5px; } .md-preview h4 { font-size: 14px; }
+  .md-preview p { margin: 0 0 10px; }
+  .md-preview ul, .md-preview ol { margin: 0 0 10px; padding-left: 22px; }
+  .md-preview li { margin-bottom: 3px; }
+  .md-preview blockquote { margin: 0 0 10px; padding: 4px 12px; border-left: 3px solid var(--brand-primary-soft); color: var(--brand-ink-soft); background: var(--brand-primary-tint); border-radius: 0 8px 8px 0; }
+  .md-preview code { font-family: "SF Mono", Consolas, monospace; font-size: 12.5px; background: var(--brand-primary-tint); color: var(--brand-primary-deep); padding: 1px 5px; border-radius: 4px; }
+  .md-preview pre { background: var(--brand-ink); color: #f4efe6; padding: 12px 14px; border-radius: var(--radius-sm); overflow-x: auto; margin: 0 0 12px; }
+  .md-preview pre code { background: none; color: inherit; padding: 0; }
+  .md-preview a { color: var(--brand-primary-deep); }
+  .md-preview hr { border: none; border-top: 1px solid var(--sys-line); margin: 14px 0; }
+  .md-preview strong { font-weight: 700; }
+  .md-preview em { font-style: italic; }
+  .md-preview .empty-note { color: var(--brand-ink-soft); font-size: 13px; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<div class="mdk-app" data-brand="default">
+<div class="mdk-shell">
+
+<header>
+  <div class="title-area">
+    <div class="brand-mark"><i class="bi bi-journal-richtext"></i></div>
+    <div>
+      <h1>MD Keep</h1>
+      <div class="brand-sub">AI Workbench</div>
+    </div>
+  </div>
+  <span id="status"><i class="bi bi-wifi"></i> online</span>
+  <button class="icon-btn" id="syncHeaderBtn" title="Sinkronisasi"><i class="bi bi-arrow-repeat"></i></button>
+</header>
+
+<div class="workspace-heading">
+  <h2>Area Kerja Kamu</h2>
+  <p>Tangkap dulu, rapikan kemudian — biar kepala tetap ringan.</p>
+</div>
+
+<div class="workspace-frame">
+<nav class="tabs">
+  <div class="tabs-track">
+    <button class="tab-btn active" id="tabProjects"><i class="bi bi-folder2"></i> PROJECTS</button>
+    <button class="tab-btn" id="tabToolbox"><i class="bi bi-tools"></i> TOOLBOX</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- FOLDERS VIEW -->
+  <div id="foldersView">
+    <div class="folder-toolbar">
+      <h2>Folder Project</h2>
+      <div class="fw-actions">
+        <div class="view-toggle" id="folderViewToggle">
+          <button class="active" data-view="card" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+          <button data-view="list" title="List view"><i class="bi bi-list-ul"></i></button>
+        </div>
+        <button class="btn-primary" id="newFolderBtn"><i class="bi bi-folder-plus"></i> Folder Baru</button>
+      </div>
+    </div>
+    <button class="trash-entry" id="trashEntryBtn"><i class="bi bi-trash3"></i> Sampah <span class="count-badge" id="trashCountBadge">0</span></button>
+    <div class="folders-grid" id="foldersGrid"></div>
+    <div class="empty" id="foldersEmpty" style="display:none;"><i class="bi bi-folder2-open"></i>Belum ada folder. Buat folder pertama untuk mulai mengelompokkan file.</div>
+  </div>
+
+  <!-- NOTES VIEW (inside a folder) -->
+  <div id="notesView" class="hidden">
+    <div class="breadcrumb">
+      <button class="crumb-link" id="backBtn"><i class="bi bi-chevron-left"></i> Home</button>
+      <i class="bi bi-chevron-right crumb-sep"></i>
+      <span class="crumb-current" id="crumbCurrent"></span>
+      <button class="btn-ghost" id="importToFolderBtn" style="margin-left:auto;" title="Impor file Markdown ke folder ini"><i class="bi bi-upload"></i> Impor .md</button>
+    </div>
+
+    <div class="composer" style="margin-top:14px;">
+      <input type="text" id="noteTitle" placeholder="Judul file…" />
+      <textarea id="noteBody" placeholder="Tempel atau tulis markdown di sini…"></textarea>
+
+      <div class="composer-toolbar">
+        <div class="autosave-status" id="autosaveStatus"><span class="dot"></span><span id="autosaveStatusText">Draf kosong</span></div>
+        <div class="composer-toolbar-row">
+          <div class="composer-toolbar-icons">
+            <button class="icon-btn" id="undoBtn" title="Undo" disabled><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button class="icon-btn" id="redoBtn" title="Redo" disabled><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="icon-btn" id="pasteBtn" title="Tempel dari clipboard"><i class="bi bi-clipboard"></i></button>
+            <button class="icon-btn" id="clearBtn" title="Bersihkan"><i class="bi bi-eraser"></i></button>
+            <button class="icon-btn" id="copyAllBtn" title="Copy All — salin judul & isi"><i class="bi bi-copy"></i></button>
+          </div>
+          <div class="composer-toolbar-main">
+            <button class="icon-btn hidden" id="viewMdBtn" title="Lihat pratinjau Markdown"><i class="bi bi-eye"></i></button>
+            <button class="icon-btn" id="saveAsBtn" title="Save As — simpan sebagai file baru"><i class="bi bi-files"></i></button>
+            <button class="btn-primary" id="saveBtn">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <i class="bi bi-search"></i>
+      <input type="text" id="searchInput" placeholder="Cari file di folder ini…" />
+    </div>
+
+    <div class="notes-grid" id="notesGrid"></div>
+    <div class="empty" id="notesEmpty" style="display:none;"><i class="bi bi-file-earmark-text"></i>Belum ada file di folder ini.</div>
+  </div>
+
+  <!-- TRASH VIEW -->
+  <div id="trashView" class="hidden">
+    <div class="breadcrumb">
+      <button class="crumb-link" id="trashBackBtn"><i class="bi bi-chevron-left"></i> Home</button>
+      <i class="bi bi-chevron-right crumb-sep"></i>
+      <span class="crumb-current">Sampah</span>
+      <button class="btn-ghost" id="emptyTrashBtn" style="margin-left:auto;"><i class="bi bi-trash3"></i> Kosongkan Sampah</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--brand-ink-soft);margin:10px 0 16px;">Item di sini otomatis terhapus permanen setelah 30 hari.</p>
+    <div id="trashList"></div>
+    <div class="empty" id="trashEmpty" style="display:none;"><i class="bi bi-trash3"></i>Sampah kosong.</div>
+  </div>
+
+  <!-- TOOLBOX VIEW -->
+  <div id="toolboxView" class="hidden">
+    <div class="folder-toolbar">
+      <h2>Toolbox</h2>
+    </div>
+    <div id="toolboxAccordion"></div>
+  </div>
+
+</div>
+</div><!-- /workspace-frame -->
+
+<!-- FAB Quick Capture -->
+<div class="fab-zone"><div class="fab-zone-in">
+  <button class="fab" id="fabBtn" title="Tambah cepat"><i class="bi bi-plus-lg"></i></button>
+</div></div>
+
+<!-- Quick capture sheet -->
+<div class="sheet-overlay" id="sheetOverlay"></div>
+<div class="bottom-sheet" id="quickCaptureSheet">
+  <div class="sheet-handle"></div>
+  <p class="sheet-title">Tangkap cepat</p>
+  <div class="sheet-options">
+    <button class="sheet-option" data-type="catatan"><i class="bi bi-file-earmark-text"></i>Catatan</button>
+    <button class="sheet-option" data-type="ide" disabled><i class="bi bi-lightbulb"></i>Ide</button>
+    <button class="sheet-option" data-type="prompt" disabled><i class="bi bi-robot"></i>Prompt</button>
+    <button class="sheet-option" data-type="decision" disabled><i class="bi bi-lock"></i>Decision</button>
+    <button class="sheet-option" data-type="bug" disabled><i class="bi bi-bug"></i>Bug</button>
+    <button class="sheet-option" data-type="task" disabled><i class="bi bi-check2-square"></i>Task</button>
+  </div>
+</div>
+
+<!-- Note ⋮ action sheet -->
+<div class="sheet-overlay" id="noteMenuOverlay"></div>
+<div class="bottom-sheet" id="noteMenuSheet">
+  <div class="sheet-handle"></div>
+  <p class="sheet-title" id="noteMenuTitle">File</p>
+  <div class="menu-list" id="noteMenuList"></div>
+</div>
+
+<!-- Folder ⋮ action sheet (hover on desktop / tekan-tahan di HP) -->
+<div class="sheet-overlay" id="folderMenuOverlay"></div>
+<div class="bottom-sheet" id="folderMenuSheet">
+  <div class="sheet-handle"></div>
+  <p class="sheet-title" id="folderMenuTitle">Folder</p>
+  <div class="menu-list" id="folderMenuList"></div>
+</div>
+
+<!-- Folder picker modal (Import destination / Move to.../ Save As...) -->
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal" id="folderPickerModal">
+  <div class="modal-title" id="modalTitle">Pilih folder tujuan</div>
+  <div class="modal-list" id="modalFolderList"></div>
+  <div class="modal-new-folder">
+    <input type="text" id="modalNewFolderName" placeholder="Atau buat folder baru…">
+    <button class="btn-ghost" id="modalCreateFolderBtn"><i class="bi bi-plus-lg"></i> Buat</button>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="modalCancelBtn">Batal</button>
+    <button class="btn-primary" id="modalConfirmBtn">Pilih</button>
+  </div>
+</div>
+
+<!-- Confirm modal (reusable: hapus note/folder, hapus permanen, kosongkan sampah, clear composer) -->
+<div class="modal-overlay" id="confirmOverlay"></div>
+<div class="modal" id="confirmModal" style="height:auto;">
+  <div class="modal-title" id="confirmTitle">Konfirmasi</div>
+  <p id="confirmMessage" style="font-size:13.5px;color:var(--brand-ink-soft);margin-bottom:16px;line-height:1.5;"></p>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="confirmCancelBtn">Batal</button>
+    <button class="btn-danger" id="confirmOkBtn">Hapus</button>
+  </div>
+</div>
+
+<!-- Rename modal (reusable: ganti nama folder & note) -->
+<div class="modal-overlay" id="renameOverlay"></div>
+<div class="modal" id="renameModal" style="height:auto;">
+  <div class="modal-title" id="renameTitle">Ganti Nama</div>
+  <input type="text" id="renameInput" placeholder="Nama baru…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--sys-line);font-size:14px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:16px;">
+  <div class="modal-actions">
+    <button class="btn-ghost" id="renameCancelBtn">Batal</button>
+    <button class="btn-primary" id="renameSaveBtn">Simpan</button>
+  </div>
+</div>
+
+<!-- Preview Markdown modal -->
+<div class="modal-overlay" id="previewOverlay"></div>
+<div class="modal" id="previewModal">
+  <div class="modal-title"><i class="bi bi-eye"></i> Pratinjau Markdown</div>
+  <div class="modal-list md-preview" id="previewBody"></div>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="previewCloseBtn">Tutup</button>
+  </div>
+</div>
+
+<!-- Sync modal (Supabase manual sync) -->
+<div class="modal-overlay" id="syncOverlay"></div>
+<div class="modal" id="syncModal" style="height:auto;">
+  <div class="modal-title"><i class="bi bi-arrow-repeat"></i> Sinkronisasi</div>
+  <div id="syncSetupPane">
+    <p style="font-size:13px;color:var(--brand-ink-soft);margin-bottom:14px;line-height:1.5;">
+      Belum ada kode sinkron di device ini. Buat kode baru di device pertama, lalu masukkan kode yang sama di device lain supaya datanya nyambung.
+    </p>
+    <button class="btn-primary" id="syncGenerateBtn" style="width:100%;margin-bottom:10px;">Buat Kode Baru (device pertama)</button>
+    <div style="display:flex;align-items:center;gap:8px;margin:6px 0;color:var(--brand-ink-soft);font-size:12px;">— atau —</div>
+    <input type="text" id="syncCodeInput" placeholder="Tempel kode dari device lain…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--sys-line);font-size:13px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:10px;">
+    <button class="btn-ghost" id="syncUseCodeBtn" style="width:100%;justify-content:center;">Gunakan Kode Ini</button>
+  </div>
+  <div id="syncActivePane" class="hidden">
+    <p style="font-size:12px;color:var(--brand-ink-soft);margin-bottom:6px;">Kode sinkron device ini:</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input type="text" id="syncCodeDisplay" readonly style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--sys-line);font-size:12px;font-family:monospace;background:var(--brand-paper);color:var(--brand-ink);">
+      <button class="icon-btn" id="syncCopyCodeBtn" title="Copy kode"><i class="bi bi-copy"></i></button>
+    </div>
+    <p id="syncStatusLine" style="font-size:12.5px;color:var(--brand-ink-soft);margin-bottom:16px;"></p>
+    <button class="btn-primary" id="syncNowBtn" style="width:100%;margin-bottom:8px;"><i class="bi bi-arrow-repeat"></i> Sync Sekarang</button>
+    <button class="btn-ghost" id="syncForgetBtn" style="width:100%;justify-content:center;font-size:12px;">Putuskan kode dari device ini</button>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="syncCloseBtn">Tutup</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div><!-- /mdk-shell -->
+</div><!-- /mdk-app -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// Catatan: fitur Sync butuh koneksi internet untuk memuat library ini pertama kali.
+// Semua fitur lain (capture, edit, folder, dst) tetap 100% jalan offline seperti biasa.
+const DB_NAME = 'mdkeep';
+const DB_VERSION = 3;
+const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 hari
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      const tx = e.currentTarget.transaction;
+      if (!database.objectStoreNames.contains('folders')) {
+        database.createObjectStore('folders', { keyPath: 'id' });
+      }
+      if (!database.objectStoreNames.contains('notes')) {
+        const store = database.createObjectStore('notes', { keyPath: 'id' });
+        store.createIndex('folderId', 'folderId');
+        store.createIndex('updatedAt', 'updatedAt');
+      } else {
+        const store = tx.objectStore('notes');
+        if (!store.indexNames.contains('folderId')) {
+          store.createIndex('folderId', 'folderId');
+        }
+      }
+      // Migrasi v3: tambahkan field soft-delete (deletedAt) di notes,
+      // dan (updatedAt, deletedAt) di folders, untuk record lama yang
+      // belum punya field ini. Diperlukan untuk fitur Sampah & sync.
+      if (e.oldVersion < 3) {
+        const notesStore = tx.objectStore('notes');
+        notesStore.openCursor().onsuccess = (ev) => {
+          const cursor = ev.target.result;
+          if (!cursor) return;
+          const rec = cursor.value;
+          if (rec.deletedAt === undefined) {
+            rec.deletedAt = null;
+            cursor.update(rec);
+          }
+          cursor.continue();
+        };
+        const foldersStore = tx.objectStore('folders');
+        foldersStore.openCursor().onsuccess = (ev) => {
+          const cursor = ev.target.result;
+          if (!cursor) return;
+          const rec = cursor.value;
+          let changed = false;
+          if (rec.updatedAt === undefined) { rec.updatedAt = rec.createdAt || Date.now(); changed = true; }
+          if (rec.deletedAt === undefined) { rec.deletedAt = null; changed = true; }
+          if (changed) cursor.update(rec);
+          cursor.continue();
+        };
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function store(name, mode) { return db.transaction(name, mode).objectStore(name); }
+
+function getAll(name) {
+  return new Promise((resolve, reject) => {
+    const req = store(name, 'readonly').getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = reject;
+  });
+}
+function put(name, obj) {
+  return new Promise((resolve, reject) => {
+    const req = store(name, 'readwrite').put(obj);
+    req.onsuccess = () => resolve();
+    req.onerror = reject;
+  });
+}
+function del(name, id) {
+  return new Promise((resolve, reject) => {
+    const req = store(name, 'readwrite').delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = reject;
+  });
+}
+
+function uid() { return `${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
+
+function slugify(text) {
+  return (text || 'file')
+    .toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .slice(0, 50) || 'file';
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) +
+    ' · ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+function formatUpdatedRelative(ts) {
+  if (!ts) return 'belum ada file';
+  const now = new Date();
+  const d = new Date(ts);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfThat = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfToday - startOfThat) / 86400000);
+  if (dayDiff === 0) return 'diperbarui hari ini';
+  if (dayDiff === 1) return 'diperbarui kemarin';
+  if (dayDiff > 1 && dayDiff < 7) return `diperbarui ${dayDiff} hari lalu`;
+  return `diperbarui ${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Markdown → HTML (ringan, tanpa dependency eksternal) ----------
+// Sengaja ditulis manual (bukan library CDN) supaya fitur "Lihat Pratinjau"
+// tetap jalan 100% offline, konsisten dengan prinsip offline-first MD Keep.
+function renderMarkdownToHtml(md) {
+  if (!md || !md.trim()) return '<p class="empty-note">Belum ada isi untuk dipratinjau.</p>';
+
+  const codeBlocks = [];
+  let src = md.replace(/```([\s\S]*?)```/g, (m, code) => {
+    codeBlocks.push(escapeHtml(code.replace(/^\n/, '').replace(/\n$/, '')));
+    return `\u0000CODEBLOCK${codeBlocks.length - 1}\u0000`;
+  });
+
+  src = escapeHtml(src);
+
+  const lines = src.split('\n');
+  let html = '';
+  let inUl = false, inOl = false, para = [];
+
+  function flushPara() {
+    if (para.length) { html += `<p>${para.join(' ')}</p>`; para = []; }
+  }
+  function closeLists() {
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+  }
+  function inline(text) {
+    return text
+      .replace(/\u0000CODEBLOCK(\d+)\u0000/g, (m, i) => `<pre><code>${codeBlocks[i]}</code></pre>`)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (/^\u0000CODEBLOCK\d+\u0000$/.test(line)) { flushPara(); closeLists(); html += inline(line); continue; }
+    if (line === '') { flushPara(); closeLists(); continue; }
+    if (/^(---|\*\*\*|___)$/.test(line)) { flushPara(); closeLists(); html += '<hr>'; continue; }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { flushPara(); closeLists(); html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; continue; }
+    const bq = line.match(/^>\s?(.*)$/);
+    if (bq) { flushPara(); closeLists(); html += `<blockquote>${inline(bq[1])}</blockquote>`; continue; }
+    const ul = line.match(/^[-*+]\s+(.*)$/);
+    if (ul) { flushPara(); if (inOl) { html += '</ol>'; inOl = false; } if (!inUl) { html += '<ul>'; inUl = true; } html += `<li>${inline(ul[1])}</li>`; continue; }
+    const ol = line.match(/^\d+\.\s+(.*)$/);
+    if (ol) { flushPara(); if (inUl) { html += '</ul>'; inUl = false; } if (!inOl) { html += '<ol>'; inOl = true; } html += `<li>${inline(ol[1])}</li>`; continue; }
+    para.push(inline(line));
+  }
+  flushPara();
+  closeLists();
+  return html;
+}
+
+function updateViewMdVisibility() {
+  const hasContent = document.getElementById('noteTitle').value.trim() || document.getElementById('noteBody').value.trim();
+  document.getElementById('viewMdBtn').classList.toggle('hidden', !hasContent);
+}
+function openPreviewModal() {
+  const body = document.getElementById('noteBody').value;
+  document.getElementById('previewBody').innerHTML = renderMarkdownToHtml(body);
+  document.getElementById('previewOverlay').classList.add('show');
+  document.getElementById('previewModal').classList.add('show');
+}
+function closePreviewModal() {
+  document.getElementById('previewOverlay').classList.remove('show');
+  document.getElementById('previewModal').classList.remove('show');
+}
+document.getElementById('viewMdBtn').addEventListener('click', openPreviewModal);
+document.getElementById('previewOverlay').addEventListener('click', closePreviewModal);
+document.getElementById('previewCloseBtn').addEventListener('click', closePreviewModal);
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function updateStatus() {
+  const el = document.getElementById('status');
+  if (navigator.onLine) {
+    el.innerHTML = '<i class="bi bi-wifi"></i> online';
+    el.classList.remove('offline');
+  } else {
+    el.innerHTML = '<i class="bi bi-wifi-off"></i> offline (tetap tersimpan)';
+    el.classList.add('offline');
+  }
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => showToast('Disalin ke clipboard'),
+      () => fallbackCopy(text)
+    );
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Disalin ke clipboard');
+  } catch (e) {
+    showToast('Gagal menyalin, salin manual ya');
+  }
+  document.body.removeChild(ta);
+}
+
+// ---------- State ----------
+let currentFolderId = null;
+let currentEditId = null;
+let notesCache = [];
+let foldersCache = [];
+
+// ---------- Folder view ----------
+async function refreshFolders() {
+  foldersCache = (await getAll('folders')).filter(f => !f.deletedAt);
+  const allNotes = (await getAll('notes')).filter(n => !n.deletedAt);
+  const grid = document.getElementById('foldersGrid');
+  const empty = document.getElementById('foldersEmpty');
+  grid.innerHTML = '';
+
+  if (foldersCache.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+  }
+
+  foldersCache
+    .sort((a,b) => a.name.localeCompare(b.name))
+    .forEach(folder => {
+      const folderNotes = allNotes.filter(n => n.folderId === folder.id);
+      const count = folderNotes.length;
+      const lastUpdated = folderNotes.reduce((max, n) => Math.max(max, n.updatedAt || 0), 0);
+      const card = document.createElement('div');
+      card.className = 'folder-card';
+      card.innerHTML = `
+        <button class="folder-menu-btn" title="Menu folder"><i class="bi bi-three-dots-vertical"></i></button>
+        <div class="icon"><i class="bi bi-folder-fill"></i></div>
+        <div class="name">${escapeHtml(folder.name)}</div>
+        <div class="count">${count} file · ${formatUpdatedRelative(lastUpdated)}</div>
+      `;
+      card.addEventListener('click', () => openFolder(folder.id));
+      const menuBtn = card.querySelector('.folder-menu-btn');
+      menuBtn.addEventListener('click', (e) => { e.stopPropagation(); openFolderMenu(folder); });
+      attachLongPress(card, () => openFolderMenu(folder));
+      grid.appendChild(card);
+    });
+}
+
+// Long-press support for touch devices (mobile: tekan-tahan membuka menu)
+function attachLongPress(el, callback, duration = 480) {
+  let timer = null;
+  let moved = false;
+  el.addEventListener('touchstart', (e) => {
+    moved = false;
+    timer = setTimeout(() => {
+      if (!moved) {
+        if (navigator.vibrate) navigator.vibrate(12);
+        callback();
+      }
+    }, duration);
+  }, { passive: true });
+  el.addEventListener('touchmove', () => { moved = true; clearTimeout(timer); }, { passive: true });
+  el.addEventListener('touchend', () => clearTimeout(timer));
+  el.addEventListener('touchcancel', () => clearTimeout(timer));
+}
+
+document.getElementById('newFolderBtn').addEventListener('click', async () => {
+  const name = prompt('Nama folder project:');
+  if (!name || !name.trim()) return;
+  const now = Date.now();
+  const folder = { id: uid(), name: name.trim(), createdAt: now, updatedAt: now, deletedAt: null };
+  await put('folders', folder);
+  showToast('Folder dibuat');
+  refreshFolders();
+});
+
+// ---------- Folder ⋮ menu (Zip / Hapus) ----------
+function openFolderMenu(folder) {
+  document.getElementById('folderMenuTitle').textContent = folder.name;
+  const list = document.getElementById('folderMenuList');
+  list.innerHTML = '';
+  const actions = [
+    ['bi-pencil', 'Ganti Nama', 'rename', ''],
+    ['bi-file-earmark-zip', 'Zip (Download .zip)', 'zip', ''],
+    ['bi-trash3', 'Hapus Folder', 'delete', 'danger'],
+  ];
+  actions.forEach(([icon, label, action, cls]) => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-list-item' + (cls ? ' ' + cls : '');
+    btn.innerHTML = `<i class="bi ${icon}"></i><span>${label}</span>`;
+    btn.addEventListener('click', () => handleFolderMenuAction(action, folder));
+    list.appendChild(btn);
+  });
+  document.getElementById('folderMenuOverlay').classList.add('show');
+  document.getElementById('folderMenuSheet').classList.add('show');
+}
+function closeFolderMenu() {
+  document.getElementById('folderMenuOverlay').classList.remove('show');
+  document.getElementById('folderMenuSheet').classList.remove('show');
+}
+document.getElementById('folderMenuOverlay').addEventListener('click', closeFolderMenu);
+
+async function handleFolderMenuAction(action, folder) {
+  closeFolderMenu();
+  if (action === 'rename') {
+    const newName = await renameDialog('Ganti Nama Folder', folder.name);
+    if (!newName || newName === folder.name) return;
+    const updated = { ...folder, name: newName, updatedAt: Date.now() };
+    await put('folders', updated);
+    showToast('Nama folder diperbarui');
+    refreshFolders();
+  } else if (action === 'zip') {
+    zipFolder(folder);
+  } else if (action === 'delete') {
+    const allNotes = await getAll('notes');
+    const activeNotes = allNotes.filter(n => n.folderId === folder.id && !n.deletedAt);
+    const count = activeNotes.length;
+    const msg = count > 0
+      ? `Folder "${folder.name}" berisi ${count} file. Folder beserta isinya akan dipindah ke Sampah.`
+      : `Pindahkan folder "${folder.name}" ke Sampah?`;
+    const ok = await confirmDialog('Hapus Folder', msg, 'Hapus');
+    if (!ok) return;
+    const now = Date.now();
+    // Soft-delete folder
+    await put('folders', { ...folder, updatedAt: now, deletedAt: now });
+    // Soft-delete isi folder, ditandai deletedWithFolder supaya restore folder ikut me-restore note ini
+    for (const n of activeNotes) {
+      await put('notes', { ...n, updatedAt: now, deletedAt: now, deletedWithFolder: true });
+    }
+    showToast('Folder dipindahkan ke Sampah');
+    refreshFolders();
+    refreshTrashBadge();
+  }
+}
+
+// Lazy-load JSZip only when actually zipping (keeps app offline-first by default)
+function loadJSZip() {
+  return new Promise((resolve, reject) => {
+    if (window.JSZip) return resolve(window.JSZip);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error('Gagal memuat modul zip'));
+    document.head.appendChild(s);
+  });
+}
+
+async function zipFolder(folder) {
+  const allNotes = await getAll('notes');
+  const notes = allNotes.filter(n => n.folderId === folder.id);
+  if (notes.length === 0) {
+    showToast('Folder ini belum ada file untuk di-zip');
+    return;
+  }
+  showToast('Menyiapkan file zip…');
+  let JSZipLib;
+  try {
+    JSZipLib = await loadJSZip();
+  } catch (e) {
+    showToast('Gagal memuat modul zip — perlu koneksi internet');
+    return;
+  }
+  const zip = new JSZipLib();
+  const usedNames = new Set();
+  notes.forEach(n => {
+    const base = slugify(n.title);
+    let name = `${base}.md`;
+    let i = 2;
+    while (usedNames.has(name)) { name = `${base}-${i}.md`; i++; }
+    usedNames.add(name);
+    zip.file(name, n.body);
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slugify(folder.name)}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Zip diunduh');
+}
+
+// ---------- Notes view ----------
+function openFolder(folderId) {
+  currentFolderId = folderId;
+  const folder = foldersCache.find(f => f.id === folderId);
+  document.getElementById('crumbCurrent').textContent = folder ? folder.name : '';
+  document.getElementById('foldersView').classList.add('hidden');
+  document.getElementById('notesView').classList.remove('hidden');
+  document.getElementById('searchInput').value = '';
+  clearComposer();
+  refreshNotes();
+}
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  currentFolderId = null;
+  document.getElementById('notesView').classList.add('hidden');
+  document.getElementById('foldersView').classList.remove('hidden');
+  refreshFolders();
+});
+
+// ---------- Sampah (Trash) view ----------
+function openTrash() {
+  document.getElementById('foldersView').classList.add('hidden');
+  document.getElementById('trashView').classList.remove('hidden');
+  refreshTrash();
+}
+function closeTrash() {
+  document.getElementById('trashView').classList.add('hidden');
+  document.getElementById('foldersView').classList.remove('hidden');
+  refreshFolders();
+}
+document.getElementById('trashEntryBtn').addEventListener('click', openTrash);
+document.getElementById('trashBackBtn').addEventListener('click', closeTrash);
+
+async function refreshTrashBadge() {
+  const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
+  const count = folders.filter(f => f.deletedAt).length + notes.filter(n => n.deletedAt).length;
+  document.getElementById('trashCountBadge').textContent = count;
+}
+
+async function refreshTrash() {
+  const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
+  const trashedFolders = folders.filter(f => f.deletedAt);
+  const trashedNotes = notes.filter(n => n.deletedAt);
+  const items = [
+    ...trashedFolders.map(f => ({ type: 'folder', data: f })),
+    ...trashedNotes.map(n => ({ type: 'note', data: n })),
+  ].sort((a, b) => b.data.deletedAt - a.data.deletedAt);
+
+  const list = document.getElementById('trashList');
+  const empty = document.getElementById('trashEmpty');
+  list.innerHTML = '';
+  refreshTrashBadge();
+
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  items.forEach(({ type, data }) => {
+    const el = document.createElement('div');
+    el.className = 'trash-item';
+    const icon = type === 'folder' ? 'bi-folder-fill' : 'bi-file-earmark-text';
+    const label = type === 'folder' ? 'Folder' : 'File';
+    el.innerHTML = `
+      <i class="bi ${icon} type-icon"></i>
+      <div class="info">
+        <div class="title">${escapeHtml(data.name || data.title || 'Tanpa judul')}</div>
+        <div class="meta">${label} · dihapus ${formatUpdatedRelative(data.deletedAt)}</div>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" data-act="restore" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>
+        <button class="icon-btn" data-act="purge" title="Hapus Permanen"><i class="bi bi-trash3"></i></button>
+      </div>
+    `;
+    el.querySelector('[data-act="restore"]').addEventListener('click', () => restoreTrashItem(type, data));
+    el.querySelector('[data-act="purge"]').addEventListener('click', () => purgeTrashItem(type, data));
+    list.appendChild(el);
+  });
+}
+
+async function restoreTrashItem(type, data) {
+  const now = Date.now();
+  if (type === 'folder') {
+    await put('folders', { ...data, deletedAt: null, updatedAt: now });
+    // Ikut restore note yang terhapus bersama folder ini (bukan yang dihapus manual sebelumnya)
+    const notes = await getAll('notes');
+    const toRestore = notes.filter(n => n.folderId === data.id && n.deletedAt && n.deletedWithFolder);
+    for (const n of toRestore) {
+      await put('notes', { ...n, deletedAt: null, deletedWithFolder: false, updatedAt: now });
+    }
+    showToast(`Folder "${data.name}" dipulihkan`);
+  } else {
+    await put('notes', { ...data, deletedAt: null, deletedWithFolder: false, updatedAt: now });
+    showToast(`File "${data.title}" dipulihkan`);
+  }
+  refreshTrash();
+}
+
+async function purgeTrashItem(type, data) {
+  const label = type === 'folder' ? data.name : data.title;
+  const ok = await confirmDialog('Hapus Permanen', `Hapus permanen "${label || 'item ini'}"? Tindakan ini tidak bisa dibatalkan.`, 'Hapus Permanen');
+  if (!ok) return;
+  if (type === 'folder') {
+    await del('folders', data.id);
+    const notes = await getAll('notes');
+    const orphaned = notes.filter(n => n.folderId === data.id && n.deletedWithFolder);
+    for (const n of orphaned) await del('notes', n.id);
+  } else {
+    await del('notes', data.id);
+  }
+  showToast('Dihapus permanen');
+  refreshTrash();
+}
+
+document.getElementById('emptyTrashBtn').addEventListener('click', async () => {
+  const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
+  const trashedFolders = folders.filter(f => f.deletedAt);
+  const trashedNotes = notes.filter(n => n.deletedAt);
+  if (trashedFolders.length === 0 && trashedNotes.length === 0) { showToast('Sampah sudah kosong'); return; }
+  const ok = await confirmDialog('Kosongkan Sampah', `Hapus permanen semua item di Sampah (${trashedFolders.length + trashedNotes.length} item)? Tindakan ini tidak bisa dibatalkan.`, 'Kosongkan');
+  if (!ok) return;
+  for (const f of trashedFolders) await del('folders', f.id);
+  for (const n of trashedNotes) await del('notes', n.id);
+  showToast('Sampah dikosongkan');
+  refreshTrash();
+});
+
+// Auto-purge item yang sudah >30 hari di Sampah, dipanggil sekali saat app dibuka
+async function purgeOldTrash() {
+  const now = Date.now();
+  const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
+  for (const f of folders) {
+    if (f.deletedAt && (now - f.deletedAt) > TRASH_RETENTION_MS) await del('folders', f.id);
+  }
+  for (const n of notes) {
+    if (n.deletedAt && (now - n.deletedAt) > TRASH_RETENTION_MS) await del('notes', n.id);
+  }
+}
+
+async function refreshNotes(filter = '') {
+  const all = await getAll('notes');
+  notesCache = all.filter(n => n.folderId === currentFolderId && !n.deletedAt)
+                  .sort((a,b) => b.updatedAt - a.updatedAt);
+  const grid = document.getElementById('notesGrid');
+  const empty = document.getElementById('notesEmpty');
+  grid.innerHTML = '';
+
+  const filtered = filter
+    ? notesCache.filter(n =>
+        n.title.toLowerCase().includes(filter.toLowerCase()) ||
+        n.body.toLowerCase().includes(filter.toLowerCase()))
+    : notesCache;
+
+  if (filtered.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  filtered.forEach(note => {
+    const div = document.createElement('div');
+    div.className = 'note';
+    div.innerHTML = `
+      <div class="note-actions">
+        <button class="icon-btn" data-action="menu" title="Menu"><i class="bi bi-three-dots-vertical"></i></button>
+      </div>
+      <h3><i class="bi bi-file-earmark-text"></i>${escapeHtml(note.title || 'Tanpa judul')}</h3>
+      <pre>${escapeHtml(note.body)}</pre>
+      <div class="meta">${formatDate(note.updatedAt)}</div>
+    `;
+    div.querySelector('[data-action="menu"]').onclick = (e) => { e.stopPropagation(); openNoteMenu(note); };
+    div.addEventListener('click', () => editNote(note));
+    grid.appendChild(div);
+  });
+}
+
+function downloadNote(note) {
+  const blob = new Blob([note.body], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${slugify(note.title)}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('File .md diunduh');
+}
+
+function editNote(note) {
+  currentEditId = note.id;
+  document.getElementById('noteTitle').value = note.title;
+  document.getElementById('noteBody').value = note.body;
+  document.getElementById('saveBtn').textContent = 'Perbarui';
+  resetComposerHistory();
+  setAutosaveStatus('saved', note.updatedAt);
+  updateViewMdVisibility();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('noteTitle').focus();
+}
+
+// ---------- Composer: persist / autosave ----------
+function setAutosaveStatus(state, ts) {
+  const wrap = document.getElementById('autosaveStatus');
+  const text = document.getElementById('autosaveStatusText');
+  wrap.classList.remove('saved', 'saving');
+  if (state === 'saving') {
+    wrap.classList.add('saving');
+    text.textContent = 'Menyimpan…';
+  } else if (state === 'saved') {
+    wrap.classList.add('saved');
+    text.textContent = `Tersimpan · ${formatTime(ts || Date.now())}`;
+  } else {
+    text.textContent = 'Draf kosong';
+  }
+}
+
+async function persistComposer({ toast = false } = {}) {
+  const title = document.getElementById('noteTitle').value.trim();
+  const body = document.getElementById('noteBody').value;
+  if (!title && !body.trim()) {
+    if (toast) showToast('Isi dulu judul atau isinya');
+    return null;
+  }
+  if (currentFolderId === null) {
+    if (toast) showToast('Pilih folder dulu untuk menyimpan file');
+    return null;
+  }
+  const now = Date.now();
+  const existing = currentEditId ? notesCache.find(n => n.id === currentEditId) : null;
+  const note = {
+    id: currentEditId || uid(),
+    folderId: currentFolderId,
+    title: title || 'Tanpa judul',
+    body,
+    updatedAt: now,
+    createdAt: existing ? existing.createdAt : now
+  };
+  await put('notes', note);
+  currentEditId = note.id;
+  document.getElementById('saveBtn').textContent = 'Perbarui';
+  setAutosaveStatus('saved', now);
+  refreshNotes(document.getElementById('searchInput').value);
+  if (toast) showToast(existing ? 'File diperbarui' : 'File disimpan');
+  return note;
+}
+
+function clearComposer() {
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteBody').value = '';
+  document.getElementById('saveBtn').textContent = 'Simpan';
+  currentEditId = null;
+  resetComposerHistory();
+  setAutosaveStatus('idle');
+  updateViewMdVisibility();
+}
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  clearTimeout(inputDebounceTimer);
+  commitHistoryPoint();
+  persistComposer({ toast: true });
+});
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  const hasContent = document.getElementById('noteTitle').value || document.getElementById('noteBody').value;
+  if (hasContent) {
+    const ok = await confirmDialog('Bersihkan Draf', 'Bersihkan draf yang sedang diketik? Perubahan yang belum disimpan akan hilang.', 'Bersihkan');
+    if (!ok) return;
+  }
+  clearComposer();
+});
+document.getElementById('searchInput').addEventListener('input', (e) => refreshNotes(e.target.value));
+
+document.getElementById('pasteBtn').addEventListener('click', async () => {
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    try {
+      const text = await navigator.clipboard.readText();
+      const body = document.getElementById('noteBody');
+      const pos = body.selectionStart || body.value.length;
+      body.value = body.value.slice(0, pos) + text + body.value.slice(pos);
+      showToast('Ditempel dari clipboard');
+      onComposerInput();
+    } catch (e) {
+      showToast('Tidak bisa akses clipboard — coba Ctrl/Cmd+V manual');
+    }
+  } else {
+    showToast('Browser ini butuh Ctrl/Cmd+V manual');
+  }
+});
+
+document.getElementById('copyAllBtn').addEventListener('click', () => {
+  const title = document.getElementById('noteTitle').value.trim() || 'Tanpa judul';
+  const body = document.getElementById('noteBody').value;
+  copyToClipboard(`# ${title}\n\n${body}`);
+});
+
+// Fungsi share dipakai dari menu ⋮ file (lihat handleNoteMenuAction -> 'share')
+// Prioritas: share sebagai FILE .md (biar app tujuan terima sebagai lampiran
+// asli, bukan teks tempelan) → fallback share teks → fallback copy clipboard.
+// Setiap tahap dibungkus try/catch sendiri supaya kalau satu cara gagal
+// (mis. canShare belum didukung penuh di browser tertentu), tidak diam saja —
+// langsung lanjut ke fallback berikutnya.
+async function shareNote(note) {
+  const title = note.title || 'Catatan MD Keep';
+  const body = note.body || '';
+  const fileName = `${slugify(title)}.md`;
+
+  // 1) Coba share sebagai file .md
+  try {
+    const file = new File([body], fileName, { type: 'text/markdown' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // dibatalkan pengguna
+    console.warn('Share file .md gagal, coba share teks:', e);
+  }
+
+  // 2) Fallback: share sebagai teks
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text: body });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // dibatalkan pengguna
+      console.warn('Share teks gagal, fallback ke clipboard:', e);
+    }
+  }
+
+  // 3) Fallback terakhir: salin ke clipboard
+  copyToClipboard(`# ${title}\n\n${body}`);
+  showToast('Share tidak didukung browser ini — konten disalin ke clipboard');
+}
+
+document.getElementById('saveAsBtn').addEventListener('click', async () => {
+  const currentTitle = document.getElementById('noteTitle').value.trim();
+  const body = document.getElementById('noteBody').value;
+  if (!currentTitle && !body.trim()) { showToast('Isi dulu judul atau isinya'); return; }
+  if (foldersCache.length === 0) { showToast('Buat folder dulu sebelum menyimpan'); return; }
+  const newTitle = prompt('Simpan sebagai judul:', currentTitle ? `${currentTitle} (Copy)` : 'File Baru');
+  if (!newTitle || !newTitle.trim()) return;
+  const destId = await openFolderPicker('Simpan sebagai — pilih folder tujuan', currentFolderId);
+  if (!destId) return;
+  const now = Date.now();
+  const note = { id: uid(), folderId: destId, title: newTitle.trim(), body, createdAt: now, updatedAt: now };
+  await put('notes', note);
+  showToast('Disimpan sebagai file baru');
+  if (destId === currentFolderId) refreshNotes(document.getElementById('searchInput').value);
+});
+
+// ---------- Undo / Redo ----------
+let undoStack = [];
+let redoStack = [];
+let lastSnapshot = null;
+let inputDebounceTimer = null;
+
+function currentComposerState() {
+  return { title: document.getElementById('noteTitle').value, body: document.getElementById('noteBody').value };
+}
+function snapshotsEqual(a, b) { return a && b && a.title === b.title && a.body === b.body; }
+
+function resetComposerHistory() {
+  undoStack = [];
+  redoStack = [];
+  lastSnapshot = currentComposerState();
+  updateUndoRedoButtons();
+}
+function commitHistoryPoint() {
+  const now = currentComposerState();
+  if (!snapshotsEqual(now, lastSnapshot)) {
+    undoStack.push(lastSnapshot);
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = [];
+    lastSnapshot = now;
+    updateUndoRedoButtons();
+  }
+}
+function applyComposerState(state) {
+  document.getElementById('noteTitle').value = state.title;
+  document.getElementById('noteBody').value = state.body;
+  lastSnapshot = state;
+  updateUndoRedoButtons();
+}
+function undoComposer() {
+  if (undoStack.length === 0) return;
+  redoStack.push(currentComposerState());
+  applyComposerState(undoStack.pop());
+}
+function redoComposer() {
+  if (redoStack.length === 0) return;
+  undoStack.push(currentComposerState());
+  applyComposerState(redoStack.pop());
+}
+function updateUndoRedoButtons() {
+  document.getElementById('undoBtn').disabled = undoStack.length === 0;
+  document.getElementById('redoBtn').disabled = redoStack.length === 0;
+}
+document.getElementById('undoBtn').addEventListener('click', undoComposer);
+document.getElementById('redoBtn').addEventListener('click', redoComposer);
+
+function onComposerInput() {
+  if (document.getElementById('noteTitle').value.trim() || document.getElementById('noteBody').value.trim()) {
+    setAutosaveStatus('saving');
+  } else {
+    setAutosaveStatus('idle');
+  }
+  updateViewMdVisibility();
+  clearTimeout(inputDebounceTimer);
+  inputDebounceTimer = setTimeout(async () => {
+    commitHistoryPoint();
+    await persistComposer({ toast: false });
+  }, 900);
+}
+document.getElementById('noteTitle').addEventListener('input', onComposerInput);
+document.getElementById('noteBody').addEventListener('input', onComposerInput);
+
+document.getElementById('noteBody').addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    clearTimeout(inputDebounceTimer);
+    commitHistoryPoint();
+    persistComposer({ toast: true });
+  }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    undoComposer();
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+    e.preventDefault();
+    redoComposer();
+  }
+});
+
+window.addEventListener('online', updateStatus);
+window.addEventListener('offline', updateStatus);
+
+// ---------- Tabs: Projects / Toolbox ----------
+function showTab(tab) {
+  const isProjects = tab === 'projects';
+  document.getElementById('tabProjects').classList.toggle('active', isProjects);
+  document.getElementById('tabToolbox').classList.toggle('active', !isProjects);
+  document.getElementById('toolboxView').classList.toggle('hidden', isProjects);
+
+  if (isProjects) {
+    const backToNotes = currentFolderId !== null;
+    document.getElementById('foldersView').classList.toggle('hidden', backToNotes);
+    document.getElementById('notesView').classList.toggle('hidden', !backToNotes);
+  } else {
+    document.getElementById('foldersView').classList.add('hidden');
+    document.getElementById('notesView').classList.add('hidden');
+    document.getElementById('trashView').classList.add('hidden');
+  }
+}
+document.getElementById('tabProjects').addEventListener('click', () => showTab('projects'));
+document.getElementById('tabToolbox').addEventListener('click', () => showTab('toolbox'));
+
+// ---------- Card / List view toggle ----------
+document.getElementById('folderViewToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-view]');
+  if (!btn) return;
+  const listMode = btn.dataset.view === 'list';
+  document.querySelectorAll('#folderViewToggle button').forEach(b => b.classList.toggle('active', b === btn));
+  document.getElementById('foldersGrid').classList.toggle('list-mode', listMode);
+  document.getElementById('notesGrid').classList.toggle('list-mode', listMode);
+});
+
+// ---------- Toolbox (dummy structure, V2.0 visual only) ----------
+const TOOLBOX_DATA = [
+  {
+    id: 'create',
+    title: 'Create / Prepare',
+    items: [
+      ['bi-magic', 'Prompt Builder'],
+      ['bi-stars', 'Markdown Cleaner'],
+      ['bi-file-earmark-ruled', 'Template'],
+      ['bi-shuffle', 'Merge Markdown'],
+      ['bi-scissors', 'Split Markdown'],
+      ['bi-diagram-3', 'Context Builder'],
+    ]
+  },
+  {
+    id: 'inspect',
+    title: 'Inspect (Sapu Jahat)',
+    items: [
+      ['bi-search-heart', 'Sapu Jahat'],
+      ['bi-palette', 'UI/UX Inspector'],
+      ['bi-phone', 'Mobile-First Inspector'],
+      ['bi-shield-lock', 'Security Inspector'],
+      ['bi-speedometer2', 'Performance Inspector'],
+      ['bi-bug', 'Bug Hunter'],
+      ['bi-rocket-takeoff', 'Pre-Launch Audit'],
+      ['bi-trophy', 'Final Boss'],
+    ]
+  },
+  {
+    id: 'organize',
+    title: 'Organize',
+    items: [
+      ['bi-diagram-2', 'Project DNA'],
+      ['bi-journal-check', 'Decision Log'],
+      ['bi-link-45deg', 'Related Notes'],
+      ['bi-play-circle', 'Resume Work'],
+      ['bi-flag', 'Next Action'],
+      ['bi-inbox', 'Parking Lot'],
+    ]
+  },
+  {
+    id: 'handoff',
+    title: 'Handoff / Export',
+    items: [
+      ['bi-clipboard', 'Copy Markdown'],
+      ['bi-robot', 'Copy as AI Prompt'],
+      ['bi-github', 'GitHub'],
+      ['bi-database', 'Supabase'],
+      ['bi-cloud', 'Google Drive'],
+      ['bi-download', 'Download .md'],
+      ['bi-file-earmark-zip', 'Export Project / ZIP'],
+    ]
+  },
+];
+
+function renderToolbox() {
+  const wrap = document.getElementById('toolboxAccordion');
+  wrap.innerHTML = '';
+  TOOLBOX_DATA.forEach((section, idx) => {
+    const sec = document.createElement('div');
+    sec.className = 'toolbox-section' + (idx === 0 ? ' open' : '');
+    sec.innerHTML = `
+      <button class="toolbox-header">
+        <span>${section.title}</span>
+        <span class="chev">▸</span>
+      </button>
+      <div class="toolbox-items">
+        ${section.items.map(([icon, name]) => `
+          <div class="toolbox-item" data-name="${escapeHtml(name)}">
+            <i class="bi ${icon}"></i>
+            <span>${escapeHtml(name)}</span>
+            <span class="soon">${name === 'Supabase' ? '' : 'segera hadir'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    sec.querySelector('.toolbox-header').addEventListener('click', () => {
+      const willOpen = !sec.classList.contains('open');
+      wrap.querySelectorAll('.toolbox-section').forEach(s => s.classList.remove('open'));
+      if (willOpen) sec.classList.add('open');
+    });
+    sec.querySelectorAll('.toolbox-item').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.dataset.name === 'Supabase') openSyncModal();
+        else showToast(`${el.dataset.name} — segera hadir`);
+      });
+    });
+    wrap.appendChild(sec);
+  });
+}
+
+// ---------- Folder picker modal (reusable: Import / Move to... / Save As...) ----------
+let modalSelectedFolderId = null;
+let modalResolve = null;
+
+function renderModalFolderList() {
+  const list = document.getElementById('modalFolderList');
+  list.innerHTML = '';
+  if (foldersCache.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'modal-empty';
+    empty.textContent = 'Belum ada folder. Buat folder baru di bawah.';
+    list.appendChild(empty);
+    return;
+  }
+  foldersCache
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(folder => {
+      const item = document.createElement('div');
+      item.className = 'modal-item' + (folder.id === modalSelectedFolderId ? ' selected' : '');
+      item.innerHTML = `<span class="radio"></span><i class="bi bi-folder-fill"></i><span>${escapeHtml(folder.name)}</span>`;
+      item.addEventListener('click', () => {
+        modalSelectedFolderId = folder.id;
+        renderModalFolderList();
+      });
+      list.appendChild(item);
+    });
+}
+
+function openFolderPicker(title, defaultFolderId = null) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalNewFolderName').value = '';
+  modalSelectedFolderId = defaultFolderId && foldersCache.some(f => f.id === defaultFolderId)
+    ? defaultFolderId
+    : (foldersCache[0] ? foldersCache[0].id : null);
+  renderModalFolderList();
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('folderPickerModal').classList.add('show');
+  return new Promise((resolve) => { modalResolve = resolve; });
+}
+function closeFolderPicker(result) {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('folderPickerModal').classList.remove('show');
+  if (modalResolve) { modalResolve(result); modalResolve = null; }
+}
+document.getElementById('modalOverlay').addEventListener('click', () => closeFolderPicker(null));
+document.getElementById('modalCancelBtn').addEventListener('click', () => closeFolderPicker(null));
+document.getElementById('modalConfirmBtn').addEventListener('click', () => closeFolderPicker(modalSelectedFolderId));
+
+document.getElementById('modalCreateFolderBtn').addEventListener('click', async () => {
+  const nameInput = document.getElementById('modalNewFolderName');
+  const name = nameInput.value.trim();
+  if (!name) { showToast('Isi dulu nama folder barunya'); return; }
+  const now = Date.now();
+  const folder = { id: uid(), name, createdAt: now, updatedAt: now, deletedAt: null };
+  await put('folders', folder);
+  foldersCache.push(folder);
+  modalSelectedFolderId = folder.id;
+  nameInput.value = '';
+  renderModalFolderList();
+  showToast(`Folder "${name}" dibuat`);
+});
+
+// ---------- Confirm modal (reusable) ----------
+let confirmResolve = null;
+function confirmDialog(title, message, okLabel = 'Hapus') {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmOkBtn').textContent = okLabel;
+  document.getElementById('confirmOverlay').classList.add('show');
+  document.getElementById('confirmModal').classList.add('show');
+  return new Promise((resolve) => { confirmResolve = resolve; });
+}
+function closeConfirmDialog(result) {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  document.getElementById('confirmModal').classList.remove('show');
+  if (confirmResolve) { confirmResolve(result); confirmResolve = null; }
+}
+document.getElementById('confirmOverlay').addEventListener('click', () => closeConfirmDialog(false));
+document.getElementById('confirmCancelBtn').addEventListener('click', () => closeConfirmDialog(false));
+document.getElementById('confirmOkBtn').addEventListener('click', () => closeConfirmDialog(true));
+
+// ---------- Rename modal (reusable) ----------
+let renameResolve = null;
+function renameDialog(title, currentValue) {
+  document.getElementById('renameTitle').textContent = title;
+  const input = document.getElementById('renameInput');
+  input.value = currentValue || '';
+  document.getElementById('renameOverlay').classList.add('show');
+  document.getElementById('renameModal').classList.add('show');
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+  return new Promise((resolve) => { renameResolve = resolve; });
+}
+function closeRenameDialog(result) {
+  document.getElementById('renameOverlay').classList.remove('show');
+  document.getElementById('renameModal').classList.remove('show');
+  if (renameResolve) { renameResolve(result); renameResolve = null; }
+}
+document.getElementById('renameOverlay').addEventListener('click', () => closeRenameDialog(null));
+document.getElementById('renameCancelBtn').addEventListener('click', () => closeRenameDialog(null));
+document.getElementById('renameSaveBtn').addEventListener('click', () => {
+  const val = document.getElementById('renameInput').value.trim();
+  closeRenameDialog(val || null);
+});
+document.getElementById('renameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('renameSaveBtn').click();
+});
+
+// ---------- Note ⋮ action menu ----------
+function openNoteMenu(note) {
+  document.getElementById('noteMenuTitle').textContent = note.title || 'Tanpa judul';
+  const list = document.getElementById('noteMenuList');
+  const actions = [
+    ['bi-share', 'Share', 'share', ''],
+    ['bi-pencil', 'Ganti Nama', 'rename', ''],
+    ['bi-folder-symlink', 'Pindah ke...', 'move', ''],
+    ['bi-save2', 'Simpan Sebagai...', 'saveas', ''],
+    ['bi-download', 'Unduh .md (Export)', 'download', ''],
+    ['__divider__'],
+    ['bi-trash3', 'Hapus', 'delete', 'danger'],
+  ];
+  list.innerHTML = '';
+  actions.forEach(a => {
+    if (a[0] === '__divider__') {
+      const div = document.createElement('div');
+      div.className = 'menu-divider';
+      list.appendChild(div);
+      return;
+    }
+    const [icon, label, action, cls] = a;
+    const btn = document.createElement('button');
+    btn.className = 'menu-list-item' + (cls ? ' ' + cls : '');
+    btn.innerHTML = `<i class="bi ${icon}"></i><span>${label}</span>`;
+    btn.addEventListener('click', () => handleNoteMenuAction(action, note));
+    list.appendChild(btn);
+  });
+  document.getElementById('noteMenuOverlay').classList.add('show');
+  document.getElementById('noteMenuSheet').classList.add('show');
+}
+function closeNoteMenu() {
+  document.getElementById('noteMenuOverlay').classList.remove('show');
+  document.getElementById('noteMenuSheet').classList.remove('show');
+}
+document.getElementById('noteMenuOverlay').addEventListener('click', closeNoteMenu);
+
+async function handleNoteMenuAction(action, note) {
+  closeNoteMenu();
+  switch (action) {
+    case 'share': await shareNote(note); break;
+    case 'rename': {
+      const newTitle = await renameDialog('Ganti Nama File', note.title || '');
+      if (!newTitle || newTitle === note.title) return;
+      const updated = { ...note, title: newTitle, updatedAt: Date.now() };
+      await put('notes', updated);
+      showToast('Judul diperbarui');
+      refreshNotes(document.getElementById('searchInput').value);
+      break;
+    }
+    case 'move': {
+      if (foldersCache.length <= 1) { showToast('Buat folder lain dulu untuk memindahkan file'); return; }
+      const destId = await openFolderPicker('Pindah ke folder mana?', note.folderId);
+      if (!destId || destId === note.folderId) return;
+      const updated = { ...note, folderId: destId, updatedAt: Date.now() };
+      await put('notes', updated);
+      const destFolder = foldersCache.find(f => f.id === destId);
+      showToast(`Dipindahkan ke "${destFolder ? destFolder.name : 'folder lain'}"`);
+      refreshNotes(document.getElementById('searchInput').value);
+      break;
+    }
+    case 'saveas': {
+      const newTitle = prompt('Simpan sebagai judul:', `${note.title || 'Tanpa judul'} (Copy)`);
+      if (!newTitle || !newTitle.trim()) return;
+      const destId = await openFolderPicker('Simpan sebagai — pilih folder tujuan', note.folderId);
+      if (!destId) return;
+      const now = Date.now();
+      const copy = { id: uid(), folderId: destId, title: newTitle.trim(), body: note.body, createdAt: now, updatedAt: now };
+      await put('notes', copy);
+      showToast('Disimpan sebagai file baru');
+      if (destId === currentFolderId) refreshNotes(document.getElementById('searchInput').value);
+      break;
+    }
+    case 'download': downloadNote(note); break;
+    case 'delete': {
+      const ok = await confirmDialog('Hapus File', `Pindahkan "${note.title || 'Tanpa judul'}" ke Sampah?`, 'Hapus');
+      if (!ok) return;
+      await put('notes', { ...note, updatedAt: Date.now(), deletedAt: Date.now(), deletedWithFolder: false });
+      showToast('File dipindahkan ke Sampah');
+      refreshNotes(document.getElementById('searchInput').value);
+      refreshTrashBadge();
+      break;
+    }
+  }
+}
+
+// ---------- Open / Import Markdown file ----------
+// Catatan: import sekarang hanya bisa dipicu dari dalam folder (importToFolderBtn),
+// tombol import di halaman depan sudah dihapus sesuai keputusan desain.
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+function titleFromFilename(filename) {
+  return filename.replace(/\.(md|markdown|txt)$/i, '') || 'File Impor';
+}
+
+const importFileInput = document.createElement('input');
+importFileInput.type = 'file';
+importFileInput.accept = '.md,.markdown,text/markdown,text/plain';
+importFileInput.hidden = true;
+document.body.appendChild(importFileInput);
+
+document.getElementById('importToFolderBtn').addEventListener('click', () => {
+  importFileInput.value = '';
+  importFileInput.click();
+});
+
+importFileInput.addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (currentFolderId === null) { showToast('Buka folder dulu untuk impor'); return; }
+  let body;
+  try { body = await readFileAsText(file); }
+  catch (err) { showToast('Gagal membaca file'); return; }
+  const title = titleFromFilename(file.name);
+
+  const now = Date.now();
+  const note = { id: uid(), folderId: currentFolderId, title, body, createdAt: now, updatedAt: now, deletedAt: null };
+  await put('notes', note);
+  showToast(`Diimpor ke folder ini`);
+  refreshNotes(document.getElementById('searchInput').value);
+});
+
+// ---------- FAB + Quick Capture bottom sheet ----------
+function openSheet() {
+  document.getElementById('sheetOverlay').classList.add('show');
+  document.getElementById('quickCaptureSheet').classList.add('show');
+}
+function closeSheet() {
+  document.getElementById('sheetOverlay').classList.remove('show');
+  document.getElementById('quickCaptureSheet').classList.remove('show');
+}
+document.getElementById('fabBtn').addEventListener('click', openSheet);
+document.getElementById('sheetOverlay').addEventListener('click', closeSheet);
+
+document.querySelectorAll('.sheet-option').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    const type = btn.dataset.type;
+    closeSheet();
+    if (type === 'catatan') {
+      if (currentFolderId === null) {
+        showToast('Pilih atau buat folder dulu untuk menyimpan file');
+        showTab('projects');
+        return;
+      }
+      showTab('projects');
+      clearComposer();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('noteTitle').focus();
+    }
+  });
+});
+
+// ---------- Sync (Supabase, manual) ----------
+const SUPABASE_URL = 'https://cfcsmrrgqjyssiptfwof.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_bpi6flOjkD1ZZTE56zAamw_82FUe7L9';
+
+function getSyncCode() { return localStorage.getItem('mdk_sync_code'); }
+function setSyncCode(code) { localStorage.setItem('mdk_sync_code', code); sbClient = null; }
+function clearSyncCode() { localStorage.removeItem('mdk_sync_code'); sbClient = null; }
+function getLastSyncedAt() { return parseInt(localStorage.getItem('mdk_last_synced') || '0', 10); }
+function setLastSyncedAt(ts) { localStorage.setItem('mdk_last_synced', String(ts)); }
+
+function genSyncCode() {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(36)).join('').slice(0, 28);
+}
+
+let sbClient = null;
+function getSbClient() {
+  const code = getSyncCode();
+  if (!code) return null;
+  if (!sbClient) {
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { 'x-workspace-code': code } },
+    });
+  }
+  return sbClient;
+}
+
+function openSyncModal() {
+  document.getElementById('syncOverlay').classList.add('show');
+  document.getElementById('syncModal').classList.add('show');
+  renderSyncModal();
+}
+function closeSyncModal() {
+  document.getElementById('syncOverlay').classList.remove('show');
+  document.getElementById('syncModal').classList.remove('show');
+}
+async function renderSyncModal() {
+  const code = getSyncCode();
+  const setupPane = document.getElementById('syncSetupPane');
+  const activePane = document.getElementById('syncActivePane');
+  if (!code) {
+    setupPane.classList.remove('hidden');
+    activePane.classList.add('hidden');
+    return;
+  }
+  setupPane.classList.add('hidden');
+  activePane.classList.remove('hidden');
+  document.getElementById('syncCodeDisplay').value = code;
+
+  const lastSynced = getLastSyncedAt();
+  const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
+  const pending = folders.filter(f => f.updatedAt > lastSynced).length + notes.filter(n => n.updatedAt > lastSynced).length;
+  const statusLine = document.getElementById('syncStatusLine');
+  const lastText = lastSynced ? `Tersinkron ${formatUpdatedRelative(lastSynced)}` : 'Belum pernah sync';
+  statusLine.textContent = pending > 0 ? `${lastText} · ${pending} perubahan menunggu` : lastText;
+}
+
+document.getElementById('syncHeaderBtn').addEventListener('click', openSyncModal);
+document.getElementById('syncOverlay').addEventListener('click', closeSyncModal);
+document.getElementById('syncCloseBtn').addEventListener('click', closeSyncModal);
+
+document.getElementById('syncGenerateBtn').addEventListener('click', () => {
+  const code = genSyncCode();
+  setSyncCode(code);
+  showToast('Kode sinkron dibuat');
+  renderSyncModal();
+});
+document.getElementById('syncUseCodeBtn').addEventListener('click', () => {
+  const code = document.getElementById('syncCodeInput').value.trim();
+  if (!code) { showToast('Masukkan kode dulu'); return; }
+  setSyncCode(code);
+  showToast('Kode sinkron disimpan');
+  renderSyncModal();
+});
+document.getElementById('syncCopyCodeBtn').addEventListener('click', () => {
+  copyToClipboard(getSyncCode() || '');
+  showToast('Kode disalin');
+});
+document.getElementById('syncForgetBtn').addEventListener('click', async () => {
+  const ok = await confirmDialog('Putuskan Sinkronisasi', 'Device ini akan berhenti sinkron sampai kode dimasukkan lagi. Data yang sudah tersimpan lokal di device ini tidak akan terhapus.', 'Putuskan');
+  if (!ok) return;
+  clearSyncCode();
+  setLastSyncedAt(0);
+  renderSyncModal();
+});
+
+document.getElementById('syncNowBtn').addEventListener('click', async () => {
+  if (!navigator.onLine) { showToast('Tidak ada koneksi internet'); return; }
+  const client = getSbClient();
+  if (!client) { showToast('Kode sinkron belum diset'); return; }
+  const btn = document.getElementById('syncNowBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Menyinkronkan...';
+  try {
+    const result = await runSync(client);
+    showToast(`Sync selesai — ${result.pulled} ditarik, ${result.pushed} dikirim`);
+  } catch (err) {
+    console.error(err);
+    showToast('Sync gagal — cek koneksi atau kode sinkron');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Sync Sekarang';
+    renderSyncModal();
+    refreshFolders();
+    if (currentFolderId !== null) refreshNotes(document.getElementById('searchInput').value);
+    refreshTrashBadge();
+  }
+});
+
+async function runSync(client) {
+  const code = getSyncCode();
+  const lastSynced = getLastSyncedAt();
+  const syncStartedAt = Date.now();
+  let pulled = 0, pushed = 0;
+
+  // 1. Tarik perubahan dari server sejak sync terakhir
+  const { data: remoteFolders, error: fErr } = await client
+    .from('mdk_folders').select('*').eq('workspace_id', code).gt('updated_at', lastSynced);
+  if (fErr) throw fErr;
+  const { data: remoteNotes, error: nErr } = await client
+    .from('mdk_notes').select('*').eq('workspace_id', code).gt('updated_at', lastSynced);
+  if (nErr) throw nErr;
+
+  const localFolders = await getAll('folders');
+  const localNotes = await getAll('notes');
+  const localFolderMap = new Map(localFolders.map(f => [f.id, f]));
+  const localNoteMap = new Map(localNotes.map(n => [n.id, n]));
+
+  // 2. Gabung ke lokal — last-write-wins berdasarkan updatedAt
+  for (const rf of (remoteFolders || [])) {
+    const local = localFolderMap.get(rf.id);
+    if (!local || rf.updated_at >= local.updatedAt) {
+      await put('folders', { id: rf.id, name: rf.name, createdAt: rf.created_at, updatedAt: rf.updated_at, deletedAt: rf.deleted_at });
+      pulled++;
+    }
+  }
+  for (const rn of (remoteNotes || [])) {
+    const local = localNoteMap.get(rn.id);
+    if (!local || rn.updated_at >= local.updatedAt) {
+      await put('notes', { id: rn.id, folderId: rn.folder_id, title: rn.title, body: rn.body, createdAt: rn.created_at, updatedAt: rn.updated_at, deletedAt: rn.deleted_at, deletedWithFolder: rn.deleted_with_folder });
+      pulled++;
+    }
+  }
+
+  // 3. Kirim perubahan lokal yang lebih baru dari sync terakhir
+  const foldersToPush = localFolders.filter(f => f.updatedAt > lastSynced).map(f => ({
+    id: f.id, workspace_id: code, name: f.name, created_at: f.createdAt, updated_at: f.updatedAt, deleted_at: f.deletedAt || null,
+  }));
+  const notesToPush = localNotes.filter(n => n.updatedAt > lastSynced).map(n => ({
+    id: n.id, workspace_id: code, folder_id: n.folderId, title: n.title, body: n.body,
+    created_at: n.createdAt, updated_at: n.updatedAt, deleted_at: n.deletedAt || null, deleted_with_folder: !!n.deletedWithFolder,
+  }));
+
+  if (foldersToPush.length) {
+    const { error } = await client.from('mdk_folders').upsert(foldersToPush);
+    if (error) throw error;
+    pushed += foldersToPush.length;
+  }
+  if (notesToPush.length) {
+    const { error } = await client.from('mdk_notes').upsert(notesToPush);
+    if (error) throw error;
+    pushed += notesToPush.length;
+  }
+
+  setLastSyncedAt(syncStartedAt);
+  return { pulled, pushed };
+}
+
+(async function init() {
+  try {
+    db = await openDB();
+  } catch (err) {
+    console.error('Gagal membuka database lokal:', err);
+    showToast('Gagal memuat database lokal — cek console (F12)');
+    return;
+  }
+  updateStatus();
+  renderToolbox();
+  resetComposerHistory();
+  try {
+    await purgeOldTrash();
+    await refreshFolders();
+    await refreshTrashBadge();
+  } catch (err) {
+    console.error('Gagal memuat data awal:', err);
+    showToast('Gagal memuat data — cek console (F12)');
+  }
+})();
+</script>
+
+</body>
+</html>
