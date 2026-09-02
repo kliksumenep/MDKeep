@@ -1461,6 +1461,7 @@ async function shareNote(note) {
   const title = note.title || 'Catatan MD Keep';
   const body = note.body || '';
   const baseName = slugify(title);
+  let lastShareError = null;
 
   // 1) Coba share sebagai file .md (ekstensi asli, ideal untuk GitJournal dkk)
   try {
@@ -1472,6 +1473,7 @@ async function shareNote(note) {
   } catch (e) {
     if (e && e.name === 'AbortError') return; // dibatalkan pengguna
     console.warn('Share file .md gagal, coba .txt:', e);
+    lastShareError = e && e.message;
   }
 
   // 2) Retry sebagai file .txt (lebih sering lolos safelist share browser)
@@ -1484,6 +1486,7 @@ async function shareNote(note) {
   } catch (e) {
     if (e && e.name === 'AbortError') return; // dibatalkan pengguna
     console.warn('Share file .txt gagal, coba share teks:', e);
+    lastShareError = e && e.message;
   }
 
   // 3) Fallback: share sebagai teks
@@ -1494,12 +1497,13 @@ async function shareNote(note) {
     } catch (e) {
       if (e && e.name === 'AbortError') return; // dibatalkan pengguna
       console.warn('Share teks gagal, fallback ke clipboard:', e);
+      lastShareError = e && e.message;
     }
   }
 
-  // 4) Fallback terakhir: salin ke clipboard
+    // 4) Fallback terakhir: salin ke clipboard
   copyToClipboard(`# ${title}\n\n${body}`);
-  showToast('Share tidak didukung browser ini — konten disalin ke clipboard');
+  showToast(lastShareError ? `Share gagal: ${lastShareError} — disalin ke clipboard` : 'Share tidak didukung browser ini — konten disalin ke clipboard');
 }
 
 document.getElementById('saveAsBtn').addEventListener('click', async () => {
