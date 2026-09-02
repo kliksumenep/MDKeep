@@ -7,7 +7,7 @@
 // naikkan angka di CACHE_VERSION ini (misal 'mdkeep-v2' -> 'mdkeep-v3').
 // Ini WAJIB, supaya HP otomatis ambil tampilan terbaru dan tidak
 // "kesangkut" di versi lama (penyebab paling umum PWA terasa macet).
-const CACHE_VERSION = 'mdkeep-v1';
+const CACHE_VERSION = 'mdkeep-v2';
 
 const CORE_ASSETS = [
   './index.html',
