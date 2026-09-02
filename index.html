@@ -694,6 +694,34 @@
   </div>
 </div>
 
+<!-- GitHub Handoff modal -->
+<div class="modal-overlay" id="githubOverlay"></div>
+<div class="modal" id="githubModal" style="height:auto;">
+  <div class="modal-title"><i class="bi bi-github"></i> Handoff ke GitHub</div>
+  <div id="githubSetupPane">
+    <p style="font-size:13px;color:var(--brand-ink-soft);margin-bottom:14px;line-height:1.5;">
+      Isi sekali saja. Token disimpan lokal di device ini (localStorage), tidak dikirim ke server MD Keep.
+    </p>
+    <label style="font-size:12px;color:var(--brand-ink-soft);display:block;margin-bottom:4px;">Personal Access Token (fine-grained, scope Contents: Read &amp; write)</label>
+    <input type="password" id="githubTokenInput" placeholder="github_pat_..." style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--sys-line);font-size:13px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:10px;">
+    <label style="font-size:12px;color:var(--brand-ink-soft);display:block;margin-bottom:4px;">Repo (format: owner/nama-repo)</label>
+    <input type="text" id="githubRepoInput" placeholder="kliksumenep/MDKeep" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--sys-line);font-size:13px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:10px;">
+    <label style="font-size:12px;color:var(--brand-ink-soft);display:block;margin-bottom:4px;">Branch</label>
+    <input type="text" id="githubBranchInput" placeholder="main" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--sys-line);font-size:13px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:10px;">
+    <label style="font-size:12px;color:var(--brand-ink-soft);display:block;margin-bottom:4px;">Folder tujuan di repo (opsional)</label>
+    <input type="text" id="githubPrefixInput" placeholder="handoff" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--sys-line);font-size:13px;background:var(--brand-paper);color:var(--brand-ink);margin-bottom:14px;">
+    <button class="btn-primary" id="githubSaveConfigBtn" style="width:100%;">Simpan Konfigurasi</button>
+  </div>
+  <div id="githubActivePane" class="hidden">
+    <p style="font-size:12.5px;color:var(--brand-ink-soft);margin-bottom:14px;line-height:1.5;" id="githubConfigSummary"></p>
+    <button class="btn-ghost" id="githubEditConfigBtn" style="width:100%;justify-content:center;margin-bottom:8px;">Ubah Konfigurasi</button>
+    <button class="btn-outline-danger" id="githubForgetConfigBtn" style="width:100%;justify-content:center;">Hapus Konfigurasi</button>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="githubCloseBtn">Tutup</button>
+  </div>
+</div>
+  
 <div class="toast" id="toast"></div>
 
 </div><!-- /mdk-shell -->
@@ -1715,7 +1743,7 @@ function renderToolbox() {
           <div class="toolbox-item" data-name="${escapeHtml(name)}">
             <i class="bi ${icon}"></i>
             <span>${escapeHtml(name)}</span>
-            <span class="soon">${name === 'Supabase' ? '' : 'segera hadir'}</span>
+            <span class="soon">${(name === 'Supabase' || name === 'GitHub') ? '' : 'segera hadir'}</span>
           </div>
         `).join('')}
       </div>
@@ -1728,6 +1756,7 @@ function renderToolbox() {
     sec.querySelectorAll('.toolbox-item').forEach(el => {
       el.addEventListener('click', () => {
         if (el.dataset.name === 'Supabase') openSyncModal();
+        else if (el.dataset.name === 'GitHub') openGithubSettingsModal();
         else showToast(`${el.dataset.name} — segera hadir`);
       });
     });
@@ -1849,6 +1878,7 @@ function openNoteMenu(note) {
   const list = document.getElementById('noteMenuList');
   const actions = [
     ['bi-share', 'Share', 'share', ''],
+    ['bi-github', 'Kirim ke GitHub', 'github', ''],
     ['bi-pencil', 'Ganti Nama', 'rename', ''],
     ['bi-folder-symlink', 'Pindah ke...', 'move', ''],
     ['bi-save2', 'Simpan Sebagai...', 'saveas', ''],
@@ -1884,6 +1914,8 @@ async function handleNoteMenuAction(action, note) {
   closeNoteMenu();
   switch (action) {
     case 'share': await shareNote(note); break;
+      case 'share': await shareNote(note); break;
+      case 'github': await pushNoteToGithub(note); break;
     case 'rename': {
       const newTitle = await renameDialog('Ganti Nama File', note.title || '');
       if (!newTitle || newTitle === note.title) return;
@@ -1929,6 +1961,133 @@ async function handleNoteMenuAction(action, note) {
   }
 }
 
+  // ---------- GitHub Handoff ----------
+let githubPendingNote = null;
+
+function getGithubConfig() {
+  const raw = localStorage.getItem('mdk_github_config');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+function setGithubConfig(cfg) { localStorage.setItem('mdk_github_config', JSON.stringify(cfg)); }
+function clearGithubConfig() { localStorage.removeItem('mdk_github_config'); }
+
+function openGithubSettingsModal() {
+  document.getElementById('githubOverlay').classList.add('show');
+  document.getElementById('githubModal').classList.add('show');
+  renderGithubSettingsModal();
+}
+function closeGithubSettingsModal() {
+  document.getElementById('githubOverlay').classList.remove('show');
+  document.getElementById('githubModal').classList.remove('show');
+}
+function renderGithubSettingsModal(forceEdit = false) {
+  const cfg = getGithubConfig();
+  const setupPane = document.getElementById('githubSetupPane');
+  const activePane = document.getElementById('githubActivePane');
+  if (!cfg || forceEdit) {
+    setupPane.classList.remove('hidden');
+    activePane.classList.add('hidden');
+    if (cfg) {
+      document.getElementById('githubTokenInput').value = cfg.token || '';
+      document.getElementById('githubRepoInput').value = cfg.repo || '';
+      document.getElementById('githubBranchInput').value = cfg.branch || 'main';
+      document.getElementById('githubPrefixInput').value = cfg.prefix || '';
+    }
+    return;
+  }
+  setupPane.classList.add('hidden');
+  activePane.classList.remove('hidden');
+  document.getElementById('githubConfigSummary').innerHTML =
+    `Repo: <strong>${escapeHtml(cfg.repo)}</strong><br>Branch: <strong>${escapeHtml(cfg.branch || 'main')}</strong><br>Folder: <strong>${escapeHtml(cfg.prefix || '(root)')}</strong>`;
+}
+document.getElementById('githubOverlay').addEventListener('click', closeGithubSettingsModal);
+document.getElementById('githubCloseBtn').addEventListener('click', closeGithubSettingsModal);
+document.getElementById('githubEditConfigBtn').addEventListener('click', () => renderGithubSettingsModal(true));
+document.getElementById('githubForgetConfigBtn').addEventListener('click', async () => {
+  const ok = await confirmDialog('Hapus Konfigurasi GitHub', 'Token dan pengaturan repo akan dihapus dari device ini.', 'Hapus');
+  if (!ok) return;
+  clearGithubConfig();
+  renderGithubSettingsModal();
+  showToast('Konfigurasi GitHub dihapus');
+});
+document.getElementById('githubSaveConfigBtn').addEventListener('click', () => {
+  const token = document.getElementById('githubTokenInput').value.trim();
+  const repo = document.getElementById('githubRepoInput').value.trim();
+  const branch = document.getElementById('githubBranchInput').value.trim() || 'main';
+  const prefix = document.getElementById('githubPrefixInput').value.trim().replace(/^\/+|\/+$/g, '');
+  if (!token || !repo.includes('/')) {
+    showToast('Isi token dan repo (format owner/nama-repo) dengan benar');
+    return;
+  }
+  setGithubConfig({ token, repo, branch, prefix });
+  showToast('Konfigurasi GitHub disimpan');
+  renderGithubSettingsModal();
+  if (githubPendingNote) {
+    const pending = githubPendingNote;
+    githubPendingNote = null;
+    closeGithubSettingsModal();
+    pushNoteToGithub(pending);
+  }
+});
+
+function utf8ToBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+async function pushNoteToGithub(note) {
+  const cfg = getGithubConfig();
+  if (!cfg) {
+    githubPendingNote = note;
+    showToast('Isi konfigurasi GitHub dulu');
+    openGithubSettingsModal();
+    return;
+  }
+  if (!navigator.onLine) { showToast('Tidak ada koneksi internet'); return; }
+
+  const folder = foldersCache.find(f => f.id === note.folderId);
+  const folderSlug = folder ? slugify(folder.name) : 'inbox';
+  const fileSlug = `${slugify(note.title)}.md`;
+  const path = [cfg.prefix, folderSlug, fileSlug].filter(Boolean).join('/');
+  const apiBase = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const headers = {
+    'Authorization': `Bearer ${cfg.token}`,
+    'Accept': 'application/vnd.github+json',
+  };
+
+  showToast('Mengirim ke GitHub…');
+  try {
+    let sha = null;
+    const getRes = await fetch(`${apiBase}?ref=${encodeURIComponent(cfg.branch)}`, { headers });
+    if (getRes.status === 200) {
+      sha = (await getRes.json()).sha;
+    } else if (getRes.status !== 404) {
+      throw new Error(`Gagal cek file (${getRes.status}): ${await getRes.text()}`);
+    }
+
+    const putBody = {
+      message: sha ? `Update ${path} via MD Keep` : `Add ${path} via MD Keep`,
+      content: utf8ToBase64(note.body || ''),
+      branch: cfg.branch,
+    };
+    if (sha) putBody.sha = sha;
+
+    const putRes = await fetch(apiBase, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(putBody),
+    });
+    if (!putRes.ok) throw new Error(`Gagal push (${putRes.status}): ${await putRes.text()}`);
+
+    const result = await putRes.json();
+    console.log('[GitHub Handoff] sukses:', result.content && result.content.html_url);
+    showToast(sha ? 'File diperbarui di GitHub' : 'File dikirim ke GitHub');
+  } catch (err) {
+    console.error('[GitHub Handoff] gagal:', err);
+    showToast('Gagal kirim ke GitHub — cek console (F12)');
+  }
+}
+  
 // ---------- Open / Import Markdown file ----------
 // Catatan: import sekarang hanya bisa dipicu dari dalam folder (importToFolderBtn),
 // tombol import di halaman depan sudah dihapus sesuai keputusan desain.
