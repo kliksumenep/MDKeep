@@ -444,8 +444,8 @@
 <div class="workspace-frame">
 <nav class="tabs">
   <div class="tabs-track">
-    <button class="tab-btn" id="tabJuragan"><i class="bi bi-crown"></i> JURAGAN</button>
-    <button class="tab-btn active" id="tabProjects"><i class="bi bi-folder2"></i> PROJECTS</button>
+    <button class="tab-btn active" id="tabJuragan"><i class="bi bi-crown"></i> JURAGAN</button>
+    <button class="tab-btn" id="tabProjects"><i class="bi bi-folder2"></i> PROJECTS</button>
     <button class="tab-btn" id="tabToolbox"><i class="bi bi-tools"></i> TOOLBOX</button>
   </div>
 </nav>
@@ -453,15 +453,14 @@
 <div class="container">
 
   <!-- JURAGAN VIEW (dummy — owner dashboard, belum nyambung ke data asli) -->
-  <div id="juraganView" class="hidden">
-    <span class="juragan-dummy-flag"><i class="bi bi-cone-striped"></i> Tampilan contoh — belum nyambung data asli</span>
-    <p class="juragan-greet">Halo, Bang 👋</p>
+  <div id="juraganView">
+    <p class="juragan-greet">Halo, Bang</p>
     <p class="juragan-greet-sub">Ringkasan pekerjaan hari ini, biar nggak perlu buka satu-satu project.</p>
 
     <div class="juragan-summary">
-      <div class="juragan-summary-item ok"><div class="num">4</div><div class="label">🟢 Selesai</div></div>
-      <div class="juragan-summary-item progress"><div class="num">2</div><div class="label">🔄 Berjalan</div></div>
-      <div class="juragan-summary-item warn"><div class="num">1</div><div class="label">⚠️ Perlu keputusan</div></div>
+      <div class="juragan-summary-item ok"><div class="num">4</div><div class="label">Selesai</div></div>
+      <div class="juragan-summary-item progress"><div class="num">2</div><div class="label">Berjalan</div></div>
+      <div class="juragan-summary-item warn"><div class="num">1</div><div class="label">Perlu keputusan</div></div>
     </div>
 
     <div class="juragan-section">
@@ -501,7 +500,7 @@
   </div>
 
   <!-- FOLDERS VIEW -->
-  <div id="foldersView">
+  <div id="foldersView" class="hidden">
     <div class="folder-toolbar">
       <h2>Folder Project</h2>
       <div class="fw-actions">
