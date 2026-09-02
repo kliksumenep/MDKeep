@@ -1,0 +1,1 @@
+# Handoff Folder ini berisi file Markdown yang dikirim otomatis dari aplikasi MD Keep (https://mdkeep.vercel.app) lewat fitur "Kirim ke GitHub". Struktur: handoff/{nama-folder-project}/{judul-file}.md
