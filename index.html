@@ -596,9 +596,9 @@
   <div class="sheet-options">
     <button class="sheet-option" data-type="catatan"><i class="bi bi-file-earmark-text"></i>Catatan</button>
     <button class="sheet-option" data-type="ide"><i class="bi bi-lightbulb"></i>Ide</button>
-    <button class="sheet-option" data-type="prompt" disabled><i class="bi bi-robot"></i>Prompt</button>
-    <button class="sheet-option" data-type="decision" disabled><i class="bi bi-lock"></i>Decision</button>
-    <button class="sheet-option" data-type="bug" disabled><i class="bi bi-bug"></i>Bug</button>
+    <button class="sheet-option" data-type="prompt"><i class="bi bi-robot"></i>Prompt</button>
+    <button class="sheet-option" data-type="decision"><i class="bi bi-lock"></i>Decision</button>
+    <button class="sheet-option" data-type="bug"><i class="bi bi-bug"></i>Bug</button>
     <button class="sheet-option" data-type="task"><i class="bi bi-check2-square"></i>Task</button>
   </div>
 </div>
@@ -1327,9 +1327,18 @@ function editNote(note) {
 
 // ---------- Note types (Quick Capture) ----------
 const NOTE_TYPE_META = {
-  catatan: { icon: 'bi-file-earmark-text', label: 'Catatan', titlePlaceholder: 'Judul file…', bodyPlaceholder: 'Tempel atau tulis markdown di sini…' },
-  ide:     { icon: 'bi-lightbulb',         label: 'Ide',     titlePlaceholder: 'Judul ide…',   bodyPlaceholder: 'Tulis ide kamu di sini…' },
-  task:    { icon: 'bi-check2-square',     label: 'Task',    titlePlaceholder: 'Nama task…',   bodyPlaceholder: 'Detail task, langkah, atau catatan tambahan…' },
+  catatan:  { icon: 'bi-file-earmark-text', label: 'Catatan',  titlePlaceholder: 'Judul file…',    bodyPlaceholder: 'Tempel atau tulis markdown di sini…' },
+  ide:      { icon: 'bi-lightbulb',         label: 'Ide',      titlePlaceholder: 'Judul ide…',      bodyPlaceholder: 'Tulis ide kamu di sini…' },
+  task:     { icon: 'bi-check2-square',     label: 'Task',     titlePlaceholder: 'Nama task…',      bodyPlaceholder: 'Detail task, langkah, atau catatan tambahan…' },
+  prompt:   { icon: 'bi-robot',             label: 'Prompt',   titlePlaceholder: 'Nama prompt…',    bodyPlaceholder: 'Isi prompt…' },
+  decision: { icon: 'bi-lock',              label: 'Decision', titlePlaceholder: 'Judul keputusan…', bodyPlaceholder: 'Isi keputusan…' },
+  bug:      { icon: 'bi-bug',               label: 'Bug',      titlePlaceholder: 'Judul bug…',      bodyPlaceholder: 'Detail bug…' },
+};
+
+const NOTE_TYPE_TEMPLATES = {
+  prompt: `# ROLE\n\n\n# TASK\n\n\n# CONTEXT\n\n\n# OUTPUT FORMAT\n`,
+  decision: `# Decision\n\nKeputusan:\n\n\nAlasan:\n\n\nStatus:\nDRAFT`,
+  bug: `# Bug Report\n\nSteps to Reproduce:\n1. \n2. \n3. \n\nExpected:\n\n\nActual:\n`,
 };
 function noteTypeMeta(type) { return NOTE_TYPE_META[type] || NOTE_TYPE_META.catatan; }
 let currentComposerType = 'catatan';
@@ -1393,7 +1402,7 @@ async function persistComposer({ toast = false } = {}) {
 
 function clearComposer(type = 'catatan') {
   document.getElementById('noteTitle').value = '';
-  document.getElementById('noteBody').value = '';
+  document.getElementById('noteBody').value = (NOTE_TYPE_TEMPLATES && NOTE_TYPE_TEMPLATES[type]) || '';
   document.getElementById('saveBtn').textContent = 'Simpan';
   currentEditId = null;
   setComposerType(type);
@@ -1975,7 +1984,7 @@ document.querySelectorAll('.sheet-option').forEach(btn => {
     if (btn.disabled) return;
     const type = btn.dataset.type;
     closeSheet();
-    if (type === 'catatan' || type === 'ide' || type === 'task') {
+    if (type === 'catatan' || type === 'ide' || type === 'task' || type === 'prompt' || type === 'decision' || type === 'bug') {
       if (currentFolderId === null) {
         showToast('Pilih atau buat folder dulu untuk menyimpan file');
         showTab('projects');
