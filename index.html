@@ -386,6 +386,37 @@
   .md-preview strong { font-weight: 700; }
   .md-preview em { font-style: italic; }
   .md-preview .empty-note { color: var(--brand-ink-soft); font-size: 13px; text-align: center; padding: 20px 0; }
+
+  /* ===================== JURAGAN (dummy dashboard) ===================== */
+  .juragan-dummy-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; color: var(--sys-warning); background: var(--sys-warning-tint); border-radius: 999px; padding: 3px 10px; margin-bottom: 14px; }
+  .juragan-greet { font-size: 19px; font-weight: 800; color: var(--brand-ink); margin: 0 0 2px; }
+  .juragan-greet-sub { font-size: 13px; color: var(--brand-ink-soft); margin: 0 0 18px; }
+  .juragan-summary { display: flex; gap: 10px; margin-bottom: 20px; }
+  .juragan-summary-item { flex: 1; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-md); padding: 12px 10px; text-align: center; box-shadow: var(--shadow-xs); }
+  .juragan-summary-item .num { font-size: 20px; font-weight: 800; }
+  .juragan-summary-item .label { font-size: 11px; color: var(--brand-ink-soft); margin-top: 2px; }
+  .juragan-summary-item.ok .num { color: var(--sys-success); }
+  .juragan-summary-item.progress .num { color: var(--brand-primary-deep); }
+  .juragan-summary-item.warn .num { color: var(--sys-warning); }
+  .juragan-section { margin-bottom: 20px; }
+  .juragan-section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--brand-ink-soft); text-transform: uppercase; margin-bottom: 10px; }
+  .juragan-checklist { display: flex; flex-direction: column; gap: 8px; }
+  .juragan-check-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--brand-ink); background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-sm); padding: 9px 12px; }
+  .juragan-check-item i { color: var(--sys-success); font-size: 15px; }
+  .juragan-decision-card { background: var(--sys-warning-tint); border: 1px solid #ecd2a0; border-radius: var(--radius-lg); padding: 14px 16px; }
+  .juragan-decision-card .heading { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--sys-warning); margin-bottom: 6px; }
+  .juragan-decision-card p { font-size: 13px; color: var(--brand-ink); margin: 0 0 4px; line-height: 1.5; }
+  .juragan-decision-card .reco { font-size: 12.5px; color: var(--brand-ink-soft); margin-bottom: 12px; }
+  .juragan-decision-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .juragan-decision-actions button { font-size: 12.5px; padding: 7px 14px; border-radius: 999px; }
+  .juragan-radar { display: flex; flex-direction: column; gap: 8px; }
+  .juragan-radar-item { display: flex; align-items: center; gap: 10px; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13.5px; }
+  .juragan-radar-item .name { font-weight: 600; flex: 1; }
+  .juragan-status-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .juragan-status-dot.ok { color: var(--sys-success); background: var(--sys-success-tint); }
+  .juragan-status-dot.review { color: var(--sys-warning); background: var(--sys-warning-tint); }
+  .juragan-status-dot.parked { color: var(--brand-primary-deep); background: var(--brand-primary-tint); }
+  .juragan-footnote { font-size: 12px; color: var(--brand-ink-soft); text-align: center; padding: 4px 8px 12px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -413,12 +444,61 @@
 <div class="workspace-frame">
 <nav class="tabs">
   <div class="tabs-track">
+    <button class="tab-btn" id="tabJuragan"><i class="bi bi-crown"></i> JURAGAN</button>
     <button class="tab-btn active" id="tabProjects"><i class="bi bi-folder2"></i> PROJECTS</button>
     <button class="tab-btn" id="tabToolbox"><i class="bi bi-tools"></i> TOOLBOX</button>
   </div>
 </nav>
 
 <div class="container">
+
+  <!-- JURAGAN VIEW (dummy — owner dashboard, belum nyambung ke data asli) -->
+  <div id="juraganView" class="hidden">
+    <span class="juragan-dummy-flag"><i class="bi bi-cone-striped"></i> Tampilan contoh — belum nyambung data asli</span>
+    <p class="juragan-greet">Halo, Bang 👋</p>
+    <p class="juragan-greet-sub">Ringkasan pekerjaan hari ini, biar nggak perlu buka satu-satu project.</p>
+
+    <div class="juragan-summary">
+      <div class="juragan-summary-item ok"><div class="num">4</div><div class="label">🟢 Selesai</div></div>
+      <div class="juragan-summary-item progress"><div class="num">2</div><div class="label">🔄 Berjalan</div></div>
+      <div class="juragan-summary-item warn"><div class="num">1</div><div class="label">⚠️ Perlu keputusan</div></div>
+    </div>
+
+    <div class="juragan-section">
+      <div class="juragan-section-title">Beres hari ini</div>
+      <div class="juragan-checklist">
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Aktifkan Quick Capture — Ide &amp; Task</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Fix Share ke GitJournal</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Deploy MD Keep ke Vercel</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Sinkron device kedua berhasil</div>
+      </div>
+    </div>
+
+    <div class="juragan-section">
+      <div class="juragan-section-title">Perlu perhatian</div>
+      <div class="juragan-decision-card">
+        <div class="heading"><i class="bi bi-exclamation-triangle-fill"></i> Butuh keputusan Bang</div>
+        <p>Markdown Cleaner (Minggu 4) butuh panggilan ke Claude API dari dalam app — perlu API key tersimpan di app.</p>
+        <div class="reco">Rekomendasi: mulai dari Copy as AI Prompt dulu (nggak butuh API key), Markdown Cleaner belakangan.</div>
+        <div class="juragan-decision-actions">
+          <button class="btn-primary" disabled title="Dummy — belum aktif">Setujui</button>
+          <button class="btn-outline-danger" disabled title="Dummy — belum aktif">Tolak</button>
+          <button class="btn-ghost" disabled title="Dummy — belum aktif">Revisi</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="juragan-section">
+      <div class="juragan-section-title">Status project</div>
+      <div class="juragan-radar">
+        <div class="juragan-radar-item"><span class="name">MD Keep</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
+        <div class="juragan-radar-item"><span class="name">KlikSumenep</span><span class="juragan-status-dot review">🟡 Review</span></div>
+        <div class="juragan-radar-item"><span class="name">Towing Master</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
+      </div>
+    </div>
+
+    <p class="juragan-footnote">Semua angka di atas contoh. Juragan beneran baru nyala setelah project &amp; session data tersambung ke tab ini.</p>
+  </div>
 
   <!-- FOLDERS VIEW -->
   <div id="foldersView">
@@ -1361,29 +1441,43 @@ document.getElementById('copyAllBtn').addEventListener('click', () => {
 });
 
 // Fungsi share dipakai dari menu ⋮ file (lihat handleNoteMenuAction -> 'share')
-// Prioritas: share sebagai FILE .md (biar app tujuan terima sebagai lampiran
-// asli, bukan teks tempelan) → fallback share teks → fallback copy clipboard.
-// Setiap tahap dibungkus try/catch sendiri supaya kalau satu cara gagal
-// (mis. canShare belum didukung penuh di browser tertentu), tidak diam saja —
-// langsung lanjut ke fallback berikutnya.
+// Prioritas: share sebagai FILE .md (biar app tujuan — termasuk GitJournal —
+// terima sebagai lampiran asli, bukan teks tempelan) → retry sebagai .txt
+// (beberapa browser Android membatasi ekstensi file yang boleh di-share lewat
+// safelist internal; .md kadang tidak lolos walau .txt lolos) → fallback
+// share teks → fallback copy clipboard.
+// Setiap tahap dibungkus try/catch sendiri supaya kalau satu cara gagal,
+// tidak diam saja — langsung lanjut ke fallback berikutnya.
 async function shareNote(note) {
   const title = note.title || 'Catatan MD Keep';
   const body = note.body || '';
-  const fileName = `${slugify(title)}.md`;
+  const baseName = slugify(title);
 
-  // 1) Coba share sebagai file .md
+  // 1) Coba share sebagai file .md (ekstensi asli, ideal untuk GitJournal dkk)
   try {
-    const file = new File([body], fileName, { type: 'text/markdown' });
+    const file = new File([body], `${baseName}.md`, { type: 'text/markdown' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title });
       return;
     }
   } catch (e) {
     if (e && e.name === 'AbortError') return; // dibatalkan pengguna
-    console.warn('Share file .md gagal, coba share teks:', e);
+    console.warn('Share file .md gagal, coba .txt:', e);
   }
 
-  // 2) Fallback: share sebagai teks
+  // 2) Retry sebagai file .txt (lebih sering lolos safelist share browser)
+  try {
+    const txtFile = new File([body], `${baseName}.txt`, { type: 'text/plain' });
+    if (navigator.canShare && navigator.canShare({ files: [txtFile] })) {
+      await navigator.share({ files: [txtFile], title });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // dibatalkan pengguna
+    console.warn('Share file .txt gagal, coba share teks:', e);
+  }
+
+  // 3) Fallback: share sebagai teks
   if (navigator.share) {
     try {
       await navigator.share({ title, text: body });
@@ -1394,7 +1488,7 @@ async function shareNote(note) {
     }
   }
 
-  // 3) Fallback terakhir: salin ke clipboard
+  // 4) Fallback terakhir: salin ke clipboard
   copyToClipboard(`# ${title}\n\n${body}`);
   showToast('Share tidak didukung browser ini — konten disalin ke clipboard');
 }
@@ -1502,10 +1596,16 @@ window.addEventListener('offline', updateStatus);
 
 // ---------- Tabs: Projects / Toolbox ----------
 function showTab(tab) {
+  const isJuragan = tab === 'juragan';
   const isProjects = tab === 'projects';
+  const isToolbox = tab === 'toolbox';
+
+  document.getElementById('tabJuragan').classList.toggle('active', isJuragan);
   document.getElementById('tabProjects').classList.toggle('active', isProjects);
-  document.getElementById('tabToolbox').classList.toggle('active', !isProjects);
-  document.getElementById('toolboxView').classList.toggle('hidden', isProjects);
+  document.getElementById('tabToolbox').classList.toggle('active', isToolbox);
+
+  document.getElementById('juraganView').classList.toggle('hidden', !isJuragan);
+  document.getElementById('toolboxView').classList.toggle('hidden', !isToolbox);
 
   if (isProjects) {
     const backToNotes = currentFolderId !== null;
@@ -1517,6 +1617,7 @@ function showTab(tab) {
     document.getElementById('trashView').classList.add('hidden');
   }
 }
+document.getElementById('tabJuragan').addEventListener('click', () => showTab('juragan'));
 document.getElementById('tabProjects').addEventListener('click', () => showTab('projects'));
 document.getElementById('tabToolbox').addEventListener('click', () => showTab('toolbox'));
 
