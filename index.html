@@ -400,8 +400,9 @@
   .juragan-summary-item.warn .num { color: var(--sys-warning); }
   .juragan-section { margin-bottom: 20px; }
   .juragan-section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; color: var(--brand-ink-soft); text-transform: uppercase; margin-bottom: 10px; }
-  .juragan-checklist { display: flex; flex-direction: column; gap: 8px; }
-  .juragan-check-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--brand-ink); background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-sm); padding: 9px 12px; }
+  .juragan-checklist { display: flex; flex-direction: column; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 2px 14px; box-shadow: var(--shadow-xs); }
+  .juragan-check-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--brand-ink); padding: 11px 0; border-bottom: 1px solid var(--sys-line); }
+  .juragan-check-item:last-child { border-bottom: none; }
   .juragan-check-item i { color: var(--sys-success); font-size: 15px; }
   .juragan-decision-card { background: var(--sys-warning-tint); border: 1px solid #ecd2a0; border-radius: var(--radius-lg); padding: 14px 16px; }
   .juragan-decision-card .heading { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--sys-warning); margin-bottom: 6px; }
