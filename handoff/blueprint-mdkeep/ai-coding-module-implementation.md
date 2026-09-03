@@ -1,140 +1,79 @@
-AI CODING MODULE IMPLEMENTATION
+# AI Coding Module Implementation
+
+## Deskripsi Tugas
+Kamu akan menambahkan modul baru bernama **AI CODING** ke dalam MD Keep.
+
+### Sumber Utama
+1. **MD Keep V2 Master Blueprint**  
+   Gunakan sebagai sumber arsitektur dan prinsip *existing system*.
+2. **MD Keep AI Coding Protocol v1**  
+   Gunakan sebagai aturan workflow AI Coding.
+
+> ⚠️ **PENTING:** JANGAN membuat implementasi berdasarkan asumsi jika sumber sudah menentukan sesuatu.
+
 ---
-Kamu akan menambahkan modul baru bernama:
 
-AI CODING
+## Tujuan
+Tambahkan AI Coding sebagai fitur native MD Keep. Fitur ini berfungsi sebagai *command center* untuk workflow berikut:
+`ANALYZE` → `PATCH` → `BUILD` → `TEST` → `CHECKPOINT` → `PREVIEW` → `PRODUCTION` → `ROLLBACK`
 
-ke dalam MD Keep.
+---
 
-SUMBER UTAMA:
+## Fitur Utama
+1. **AI Coding Console**
+2. **Project Selector**
+3. **Project Context**
+4. **Task Input**
+5. **Quick Commands:**
+   * ANALYZE
+   * PATCH
+   * DEBUG
+   * UI PATCH
+   * NEW FEATURE
+   * BUILD
+   * PREVIEW
+   * PRODUCTION
+   * CHECKPOINT
+   * ROLLBACK
+   * STOP
+6. **Protocol Loader**
+7. **Prompt Composer**
+8. **Execution Status**
+9. **Build/Test Status**
+10. **Deployment Status**
+11. **Checkpoint History**
+12. **Rollback Control**
 
-1. MD Keep V2 Master Blueprint
-   → gunakan sebagai sumber arsitektur dan prinsip existing system.
+---
 
-2. MD Keep AI Coding Protocol v1
-   → gunakan sebagai aturan workflow AI Coding.
+## Aturan Penting
+* **Single Source of Truth:** AI CODING wajib menggunakan *MD Keep AI Coding Protocol v1*. Jangan membuat ulang protocol di tempat lain.
+* **Surgical Patch:** Jangan *rewrite* file besar tanpa alasan. Gunakan perubahan spesifik (*surgical patch*).
+* **Workflow Validasi:** Wajib melakukan *build/test* sebelum *deployment*, dan *preview* sebelum *production*.
+* **Manajemen Risiko:** Jika perubahan berisiko besar, segera **STOP** dan minta *approval*.
 
-JANGAN membuat implementasi berdasarkan asumsi
-jika sumber sudah menentukan sesuatu.
+---
 
-==================================================
-TUJUAN
-==================================================
+## Tahap Implementasi
 
-Tambahkan AI Coding sebagai fitur native MD Keep.
+### 🛑 JANGAN langsung coding seluruh fitur!
 
-AI Coding berfungsi sebagai command center untuk
-workflow:
+### TAHAP 1 — ANALYZE
 
-ANALYZE
-→ PATCH
-→ BUILD
-→ TEST
-→ CHECKPOINT
-→ PREVIEW
-→ PRODUCTION
-→ ROLLBACK
+#### 1. Pelajari Existing MD Keep
+Identifikasi aspek-aspek berikut tanpa mengubah kode asal:
+* Struktur project
+* Frontend & Backend
+* Database & Authentication
+* Existing integrations (GitHub, Vercel, Supabase, Cloudflare)
+* Existing AI flow & Existing Toolbox architecture
 
-==================================================
-FITUR UTAMA
-==================================================
+#### 2. Output yang Harus Diberikan:
+1. Daftar file yang perlu diubah
+2. Komponen yang perlu dibuat
+3. Perubahan database (*database changes*) jika diperlukan
+4. Perubahan API/integrasi
+5. Analisis risiko
+6. Rencana implementasi
 
-1. AI Coding Console
-
-2. Project Selector
-
-3. Project Context
-
-4. Task Input
-
-5. Quick Commands:
-
-- ANALYZE
-- PATCH
-- DEBUG
-- UI PATCH
-- NEW FEATURE
-- BUILD
-- PREVIEW
-- PRODUCTION
-- CHECKPOINT
-- ROLLBACK
-- STOP
-
-6. Protocol Loader
-
-7. Prompt Composer
-
-8. Execution Status
-
-9. Build/Test Status
-
-10. Deployment Status
-
-11. Checkpoint History
-
-12. Rollback Control
-
-==================================================
-ATURAN PENTING
-==================================================
-
-AI CODING WAJIB menggunakan:
-
-MD Keep AI Coding Protocol v1
-
-Jangan membuat ulang protocol di tempat lain.
-
-Protocol harus diperlakukan sebagai
-single source of truth.
-
-Jangan rewrite file besar tanpa alasan.
-
-Gunakan surgical patch.
-
-Build/test sebelum deployment.
-
-Preview sebelum production.
-
-Jika perubahan berisiko besar:
-STOP dan minta approval.
-
-==================================================
-TAHAP IMPLEMENTASI
-==================================================
-
-JANGAN langsung coding seluruh fitur.
-
-TAHAP 1 — ANALYZE
-
-Pelajari existing MD Keep.
-
-Identifikasi:
-
-- struktur project
-- frontend
-- backend
-- database
-- authentication
-- existing integrations
-- GitHub integration
-- Vercel integration
-- Supabase integration
-- Cloudflare integration
-- existing AI flow
-- existing Toolbox architecture
-
-Jangan mengubah kode.
-
-Berikan:
-
-1. file yang perlu diubah
-2. komponen yang perlu dibuat
-3. database changes jika diperlukan
-4. API/integration changes
-5. risiko
-6. rencana implementasi
-
-STOP setelah analisis.
-
-Jangan deploy.
+> 🛑 **STOP setelah analisis selesai. Jangan lakukan deploy.**
