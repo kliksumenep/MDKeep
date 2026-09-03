@@ -175,9 +175,10 @@
   .breadcrumb .crumb-current { font-weight: 700; color: var(--brand-ink); padding: 4px 6px; }
 
   /* ---------- Folder grid ---------- */
-  .folder-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+  .folder-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
   .folder-toolbar h2 { font-size: 17px; margin: 0; }
-  .folder-toolbar .fw-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .folder-actions-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+  .folder-actions-row .fw-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .folders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .folder-card { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); padding: 16px 14px; box-shadow: var(--shadow-xs); cursor: pointer; position: relative; }
   .folder-card:hover { border-color: var(--brand-primary-soft); }
@@ -190,15 +191,23 @@
   .folder-menu-btn:hover { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
   .folder-menu-btn.pressed { opacity: 1; background: var(--brand-primary-tint); }
 
-  /* ---------- Sampah (Trash) ---------- */
+    /* ---------- Sampah (Trash) — icon-only ---------- */
   .trash-entry {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
-    padding: 10px 12px; border-radius: var(--radius-md);
-    border: 1px dashed var(--sys-line); color: var(--brand-ink-soft);
-    font-size: 14px; font-weight: 600; cursor: pointer; background: transparent;
+    position: relative;
+    background: var(--sys-card); border: 1px solid var(--sys-line);
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    font-size: 15px; color: var(--brand-ink-soft); cursor: pointer;
+    flex-shrink: 0;
   }
   .trash-entry:hover { background: var(--sys-danger-tint); color: var(--sys-danger); border-color: var(--sys-danger); }
-  .trash-entry .count-badge { margin-left: auto; font-weight: 700; }
+  .trash-entry .count-badge {
+    position: absolute; top: -5px; right: -5px;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 999px; background: var(--sys-danger); color: #fff;
+    font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+  }
+  .trash-entry .count-badge.zero { display: none; }
   .trash-item {
     background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-md);
     padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
@@ -527,9 +536,12 @@
   </div>
 
   <!-- FOLDERS VIEW -->
-  <div id="foldersView" class="hidden">
+    <div id="foldersView" class="hidden">
     <div class="folder-toolbar">
       <h2>Folder Project</h2>
+    </div>
+    <div class="folder-actions-row">
+      <button class="trash-entry" id="trashEntryBtn" title="Sampah"><i class="bi bi-trash3"></i><span class="count-badge" id="trashCountBadge">0</span></button>
       <div class="fw-actions">
         <div class="view-toggle" id="folderViewToggle">
           <button class="active" data-view="card" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
@@ -538,7 +550,6 @@
         <button class="btn-outline-danger" id="newFolderBtn"><i class="bi bi-folder-plus"></i> Folder Baru</button>
       </div>
     </div>
-    <button class="trash-entry" id="trashEntryBtn"><i class="bi bi-trash3"></i> Sampah <span class="count-badge" id="trashCountBadge">0</span></button>
     <div class="folders-grid" id="foldersGrid"></div>
     <div class="empty" id="foldersEmpty" style="display:none;"><i class="bi bi-folder2-open"></i>Belum ada folder. Buat folder pertama untuk mulai mengelompokkan file.</div>
   </div>
@@ -1211,7 +1222,9 @@ document.getElementById('trashBackBtn').addEventListener('click', closeTrash);
 async function refreshTrashBadge() {
   const [folders, notes] = await Promise.all([getAll('folders'), getAll('notes')]);
   const count = folders.filter(f => f.deletedAt).length + notes.filter(n => n.deletedAt).length;
-  document.getElementById('trashCountBadge').textContent = count;
+  const badge = document.getElementById('trashCountBadge');
+  badge.textContent = count;
+  badge.classList.toggle('zero', count === 0);
 }
 
 async function refreshTrash() {
