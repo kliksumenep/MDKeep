@@ -148,23 +148,24 @@
   .workspace-heading p { font-size: 14px; color: var(--brand-ink-soft); margin-top: 4px; line-height: 1.5; }
 
   /* ---------- Workspace frame — visually ties tabs to the card/toolbox area below ---------- */
-  .workspace-frame {
+    .workspace-frame {
     max-width: var(--shell-w); margin: 12px auto 0;
     border: 1px solid var(--sys-line); border-radius: var(--radius-lg);
-    background: var(--sys-card); overflow: hidden;
+    background: var(--brand-paper); overflow: hidden;
   }
-  .workspace-frame .tabs { max-width: none; margin: 0; padding: 10px 12px; }
-  .workspace-frame .tabs-track { border: none; background: var(--brand-paper); }
+  .workspace-frame .tabs { max-width: none; margin: 0; padding: 0 12px; }
+  .workspace-frame .tabs-track { border: none; background: var(--brand-paper); border-bottom: 1px solid var(--sys-line); border-radius: 0; padding: 0; gap: 0; }
   .workspace-frame .container {
     max-width: none; margin: 0; padding: 16px 16px 90px;
-    background: var(--brand-paper); border-top: 1px solid var(--sys-line);
+    background: var(--brand-paper); border-top: none;
   }
 
-  /* ---------- Segmented tabs — kept quieter than action buttons ---------- */
+  /* ---------- Underline tabs — menyatu dengan konten, bukan pill/tombol ---------- */
   .tabs { max-width: var(--shell-w); margin: 0 auto; padding: 12px 16px 0; }
-  .tabs-track { display: flex; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: 10px; padding: 3px; gap: 3px; }
-  .tab-btn { flex: 1; background: transparent; color: var(--brand-ink-soft); padding: 10px 10px; border-radius: 8px; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .tab-btn.active { background: var(--brand-primary-tint); color: var(--brand-primary-deep); }
+  .tabs-track { display: flex; background: transparent; border: none; border-radius: 0; padding: 0; gap: 4px; }
+  .tab-btn { flex: 1; background: transparent; color: var(--brand-ink-soft); padding: 12px 8px; border-radius: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center; gap: 6px; border-bottom: 2.5px solid transparent; }
+  .tab-btn:hover { color: var(--brand-primary-deep); }
+  .tab-btn.active { background: transparent; color: var(--brand-primary-deep); border-bottom-color: var(--brand-primary); font-weight: 700; }
 
   /* ---------- Breadcrumb ---------- */
   .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--brand-ink-soft); flex-wrap: wrap; margin-bottom: 6px; }
