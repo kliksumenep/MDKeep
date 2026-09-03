@@ -1600,6 +1600,19 @@ function currentComposerState() {
 }
 function snapshotsEqual(a, b) { return a && b && a.title === b.title && a.body === b.body; }
 
+// ---------- Toolbox: Copy as AI Prompt (Handoff, no API needed) ----------
+function buildAiPromptText({ title, body }) {
+  return `# ROLE\n\n\n# TASK\n${title || '(tanpa judul)'}\n\n# CONTEXT\n${body || '(kosong)'}\n\n# OUTPUT FORMAT\n`;
+}
+function copyComposerAsAiPrompt() {
+  const state = currentComposerState();
+  if (!state.title.trim() && !state.body.trim()) {
+    showToast('Buka atau tulis catatan dulu sebelum copy sebagai AI Prompt');
+    return;
+  }
+  copyToClipboard(buildAiPromptText(state));
+}
+
 function resetComposerHistory() {
   undoStack = [];
   redoStack = [];
@@ -1788,7 +1801,7 @@ function renderToolbox() {
           <div class="toolbox-item" data-name="${escapeHtml(name)}">
             <i class="bi ${icon}"></i>
             <span>${escapeHtml(name)}</span>
-            <span class="soon">${(name === 'Supabase' || name === 'GitHub') ? '' : 'segera hadir'}</span>
+            <span class="soon">${(name === 'Supabase' || name === 'GitHub' || name === 'Copy as AI Prompt') ? '' : 'segera hadir'}</span>
           </div>
         `).join('')}
       </div>
@@ -1802,6 +1815,7 @@ function renderToolbox() {
       el.addEventListener('click', () => {
         if (el.dataset.name === 'Supabase') openSyncModal();
         else if (el.dataset.name === 'GitHub') openGithubSettingsModal();
+        else if (el.dataset.name === 'Copy as AI Prompt') copyComposerAsAiPrompt();
         else showToast(`${el.dataset.name} — segera hadir`);
       });
     });
