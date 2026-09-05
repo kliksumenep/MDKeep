@@ -758,6 +758,18 @@
     <button class="btn-ghost" id="githubCloseBtn">Tutup</button>
   </div>
 </div>
+
+<!-- Toolbox info modal (penjelasan tiap tool, generik untuk semua 27 item) -->
+<div class="modal-overlay" id="infoOverlay"></div>
+<div class="modal" id="infoModal" style="height:auto;">
+  <div class="modal-title" id="infoModalTitle">Nama Tool</div>
+  <p id="infoModalBody" style="font-size:13.5px;color:var(--brand-ink-soft);margin-bottom:14px;line-height:1.6;"></p>
+  <p id="infoModalSoonNote" class="hidden" style="font-size:12.5px;color:var(--brand-ink-soft);margin-bottom:14px;">🕓 Segera hadir</p>
+  <div class="modal-actions">
+    <button class="btn-ghost" id="infoModalCloseBtn">Tutup</button>
+    <button class="btn-primary hidden" id="infoModalActionBtn">Gunakan Sekarang</button>
+  </div>
+</div>
   
 <div class="toast" id="toast"></div>
 
@@ -1746,9 +1758,9 @@ const TOOLBOX_DATA = [
   },
   {
     id: 'inspect',
-    title: 'Inspect (Sapu Jahat)',
+    title: 'Inspect (Sapu Jagat)',
     items: [
-      ['bi-search-heart', 'Sapu Jahat'],
+      ['bi-search-heart', 'Sapu Jagat'],
       ['bi-palette', 'UI/UX Inspector'],
       ['bi-phone', 'Mobile-First Inspector'],
       ['bi-shield-lock', 'Security Inspector'],
@@ -1785,6 +1797,74 @@ const TOOLBOX_DATA = [
   },
 ];
 
+// Teks penjelasan tiap tool Toolbox, ditampilkan di modal saat label diketuk.
+// Tambah tool baru? cukup tambah 1 baris di sini, tidak perlu ubah bagian lain.
+const TOOLBOX_INFO = {
+  'Prompt Builder': 'Cukup isi kotak kotak singkat, mau AI berperan sebagai apa, tujuannya apa, Prompt Builder akan merapikannya menjadi prompt yang terstruktur dan siap pakai, hanya dari sedikit catatan. Tekan Generate, dan prompt rapi langsung dihasilkan, tersimpan otomatis, siap dikirim ke AI mana pun.',
+  'Markdown Cleaner': 'Tempelkan tulisan yang masih berantakan, dan Markdown Cleaner akan merapikannya menjadi format Markdown yang bersih dan enak dibaca. Cocok untuk hasil diskusi panjang atau catatan mentah yang butuh dirapikan sebelum disimpan. Hasilnya bisa langsung disimpan sebagai catatan baru.',
+  'Template': 'Pilih template siap pakai untuk jenis catatan yang sering dibuat, misalnya blueprint project, laporan bug, atau catatan keputusan. Tidak perlu menyusun struktur dari nol setiap kali. Tinggal pilih, isi bagian yang kosong, dan catatan pun siap digunakan.',
+  'Merge Markdown': 'Gabungkan beberapa catatan Markdown yang berkaitan menjadi satu dokumen utuh. Berguna saat beberapa ide atau bagian pekerjaan perlu disatukan sebelum dikirim atau dijadikan dokumentasi. Cukup pilih catatan yang ingin digabung, dan hasilnya langsung tersusun rapi.',
+  'Split Markdown': 'Pecah satu catatan panjang menjadi beberapa catatan yang lebih kecil dan fokus. Cocok untuk dokumen besar yang sebenarnya berisi beberapa topik berbeda. Pilih bagian yang ingin dipisah, dan setiap bagian akan menjadi catatan tersendiri.',
+  'Context Builder': 'Kumpulkan bagian bagian penting dari sebuah project, seperti Project DNA, keputusan terkunci, dan catatan terkait, menjadi satu paket konteks untuk AI. Dengan begitu AI langsung memahami situasi project tanpa perlu penjelasan ulang. Hasilnya siap dikirim bersama prompt apa pun.',
+
+  'Sapu Jagat': 'Pemeriksaan menyeluruh sebelum sebuah pekerjaan dianggap selesai. Sapu Jagat menyisir project dari berbagai sisi, mulai dari tampilan, keamanan, hingga performa, lalu melaporkan apa saja yang masih perlu diperbaiki. Perbaikan baru dilakukan setelah kamu menyetujuinya.',
+  'UI/UX Inspector': 'Memeriksa tampilan dan pengalaman penggunaan sebuah project, mencari bagian yang membingungkan atau kurang nyaman digunakan. Hasilnya berupa daftar temuan beserta saran perbaikan sederhana yang bisa langsung kamu putuskan.',
+  'Mobile-First Inspector': 'Memastikan tampilan project tetap nyaman digunakan di layar kecil seperti HP. Memeriksa ukuran tombol, jarak antar elemen, dan kenyamanan penggunaan satu tangan. Cocok dijalankan sebelum sebuah fitur dianggap siap dipakai sehari hari.',
+  'Security Inspector': 'Memeriksa celah keamanan sederhana pada sebuah project, seperti data yang tersimpan sembarangan atau akses yang terlalu terbuka. Temuan disajikan dengan bahasa yang mudah dipahami, bukan istilah teknis yang membingungkan.',
+  'Performance Inspector': 'Mengecek kecepatan dan kelancaran sebuah project, mencari bagian yang membuatnya terasa lambat atau berat. Hasilnya berupa catatan sederhana tentang apa yang bisa dirapikan agar project terasa lebih ringan.',
+  'Bug Hunter': 'Menyisir project untuk menemukan kejanggalan kecil yang mungkin luput dari perhatian, seperti tombol yang tidak berfungsi atau tampilan yang tidak sesuai. Semua temuan dicatat rapi sebagai daftar yang bisa ditindaklanjuti satu per satu.',
+  'Pre-Launch Audit': 'Pemeriksaan terakhir sebelum sebuah project resmi diluncurkan. Menggabungkan berbagai sisi penting, mulai dari fungsi, tampilan, hingga kesiapan data, agar tidak ada hal penting yang terlewat saat hari peluncuran tiba.',
+  'Final Boss': 'Pemeriksaan paling menyeluruh yang menggabungkan semua inspector menjadi satu laporan besar. Cocok dijalankan saat sebuah project benar benar akan memasuki tahap penting, seperti rilis besar atau serah terima ke pihak lain.',
+
+  'Project DNA': 'Catatan inti sebuah project yang berisi tujuan, aturan, batasan, dan keputusan pentingnya. Project DNA menjadi acuan utama, baik untuk kamu sendiri maupun untuk AI, agar setiap pekerjaan tetap sejalan dengan arah yang sudah ditetapkan.',
+  'Decision Log': 'Catatan semua keputusan penting yang pernah diambil dalam sebuah project, lengkap dengan alasan di baliknya. Berguna saat suatu saat kamu lupa mengapa sebuah keputusan diambil, tinggal buka catatannya kembali.',
+  'Related Notes': 'Menghubungkan catatan catatan yang saling berkaitan, meski letaknya di folder berbeda. Memudahkan menemukan konteks lengkap tanpa harus mengingat ingat di mana catatan itu tersimpan.',
+  'Resume Work': 'Membawa kamu kembali ke titik terakhir sebuah pekerjaan ditinggalkan, lengkap dengan apa yang sudah selesai, apa yang masih berjalan, dan apa yang perlu dilakukan berikutnya. Tidak perlu lagi mengingat ingat sendiri.',
+  'Next Action': 'Menandai langkah berikutnya yang perlu dikerjakan pada sebuah project atau catatan. Membantu memastikan setiap pekerjaan punya arah yang jelas dan tidak menggantung tanpa kelanjutan.',
+  'Parking Lot': 'Tempat menampung ide atau pekerjaan yang belum saatnya dikerjakan, tanpa membuatnya hilang atau terlupakan. Bisa diambil kembali kapan pun sudah siap dilanjutkan.',
+
+  'Copy Markdown': 'Menyalin isi catatan apa adanya dalam format Markdown mentah. Cocok saat kamu ingin memindahkan catatan ke aplikasi lain yang juga mendukung Markdown, tanpa kehilangan format aslinya.',
+  'Copy as AI Prompt': 'Mengubah catatan aktif menjadi prompt siap pakai dengan struktur rapi, lengkap dengan bagian tugas dan konteksnya. Tinggal salin dan tempelkan ke AI mana pun untuk langsung dikerjakan.',
+  'GitHub': 'Mengirim catatan langsung ke repository GitHub tanpa perlu membuka aplikasi lain. Cocok untuk menyimpan blueprint, dokumentasi, atau catatan penting sebagai bagian dari riwayat project.',
+  'Supabase': 'Menyamakan data MDKeep antar perangkat menggunakan kode pairing sederhana. Catatan yang dibuat di HP bisa langsung muncul di komputer, begitu pula sebaliknya.',
+  'Google Drive': 'Mengirim catatan ke Google Drive agar tersimpan aman di cloud dan mudah dibagikan ke orang lain. Cocok untuk dokumen yang perlu diakses bersama tim.',
+  'Download .md': 'Mengunduh catatan sebagai file Markdown ke perangkat kamu. Berguna saat ingin menyimpan salinan pribadi atau memindahkannya ke aplikasi lain di luar MDKeep.',
+  'Export Project / ZIP': 'Mengunduh seluruh isi sebuah folder project sekaligus dalam satu file ZIP. Praktis untuk mencadangkan project secara lengkap atau mengirimkannya utuh ke orang lain.',
+};
+
+// Tool yang sudah beneran jalan, dipetakan ke fungsi aksinya.
+// Tool yang belum ada di sini otomatis dianggap "segera hadir" di dalam modal.
+const TOOLBOX_ACTIONS = {
+  'GitHub': () => openGithubSettingsModal(),
+  'Supabase': () => openSyncModal(),
+  'Copy as AI Prompt': () => copyComposerAsAiPrompt(),
+};
+
+function openToolboxInfoModal(name) {
+  const desc = TOOLBOX_INFO[name] || 'Penjelasan untuk tool ini belum tersedia.';
+  const action = TOOLBOX_ACTIONS[name];
+  document.getElementById('infoModalTitle').textContent = name;
+  document.getElementById('infoModalBody').textContent = desc;
+  const actionBtn = document.getElementById('infoModalActionBtn');
+  const soonNote = document.getElementById('infoModalSoonNote');
+  if (action) {
+    actionBtn.classList.remove('hidden');
+    soonNote.classList.add('hidden');
+    actionBtn.onclick = () => { closeToolboxInfoModal(); action(); };
+  } else {
+    actionBtn.classList.add('hidden');
+    soonNote.classList.remove('hidden');
+  }
+  document.getElementById('infoOverlay').classList.add('show');
+  document.getElementById('infoModal').classList.add('show');
+}
+function closeToolboxInfoModal() {
+  document.getElementById('infoOverlay').classList.remove('show');
+  document.getElementById('infoModal').classList.remove('show');
+}
+document.getElementById('infoOverlay').addEventListener('click', closeToolboxInfoModal);
+document.getElementById('infoModalCloseBtn').addEventListener('click', closeToolboxInfoModal);
+
 function renderToolbox() {
   const wrap = document.getElementById('toolboxAccordion');
   wrap.innerHTML = '';
@@ -1812,12 +1892,7 @@ function renderToolbox() {
       if (willOpen) sec.classList.add('open');
     });
     sec.querySelectorAll('.toolbox-item').forEach(el => {
-      el.addEventListener('click', () => {
-        if (el.dataset.name === 'Supabase') openSyncModal();
-        else if (el.dataset.name === 'GitHub') openGithubSettingsModal();
-        else if (el.dataset.name === 'Copy as AI Prompt') copyComposerAsAiPrompt();
-        else showToast(`${el.dataset.name} — segera hadir`);
-      });
+      el.addEventListener('click', () => openToolboxInfoModal(el.dataset.name));
     });
     wrap.appendChild(sec);
   });
