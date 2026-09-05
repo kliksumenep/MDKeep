@@ -403,8 +403,8 @@
   .juragan-dummy-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.03em; color: var(--sys-warning); background: var(--sys-warning-tint); border-radius: 999px; padding: 3px 10px; margin-bottom: 14px; }
   .juragan-greet { font-size: 19px; font-weight: 800; color: var(--brand-ink); margin: 0 0 3px; }
   .juragan-greet-sub { font-size: 14px; color: var(--brand-ink-soft); margin: 0 0 18px; line-height: 1.5; }
-  .juragan-summary { display: flex; gap: 10px; margin-bottom: 20px; }
-  .juragan-summary-item { flex: 1; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-md); padding: 12px 10px; text-align: center; box-shadow: var(--shadow-xs); }
+  .juragan-summary { display: flex; gap: 10px; margin-bottom: 28px; }
+  .juragan-summary-item { flex: 1; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-md); padding: 9px 10px; text-align: center; box-shadow: var(--shadow-xs); }
   .juragan-summary-item .num { font-size: 20px; font-weight: 800; }
   .juragan-summary-item .label { font-size: 12.5px; color: var(--brand-ink-soft); margin-top: 3px; }
   .juragan-summary-item.ok .num { color: var(--sys-success); }
@@ -416,6 +416,10 @@
   .juragan-check-item { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--brand-ink); padding: 12px 0; border-bottom: 1px solid var(--sys-line); line-height: 1.4; }
   .juragan-check-item:last-child { border-bottom: none; }
   .juragan-check-item i { color: var(--sys-success); font-size: 16px; }
+  .juragan-check-more { border-top: 1px solid var(--sys-line); }
+  .juragan-check-more summary { list-style: none; cursor: pointer; padding: 12px 0; font-size: 13.5px; font-weight: 600; color: var(--brand-primary-deep); }
+  .juragan-check-more summary::-webkit-details-marker { display: none; }
+  .juragan-check-more .juragan-check-item { border-bottom: none; padding: 10px 0 12px; }
   .juragan-decision-card { background: var(--sys-warning-tint); border: 1px solid #ecd2a0; border-radius: var(--radius-lg); padding: 14px 16px; }
   .juragan-decision-card .heading { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 700; color: var(--sys-warning); margin-bottom: 7px; }
   .juragan-decision-card p { font-size: 14px; color: var(--brand-ink); margin: 0 0 6px; line-height: 1.55; }
@@ -433,6 +437,9 @@
 
   /* ===================== JURAGAN DROPDOWN (baru) ===================== */
   .juragan-dropdown { background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); margin-bottom: 20px; box-shadow: var(--shadow-xs); overflow: hidden; }
+  .juragan-dropdown-group { display: flex; flex-direction: column; background: var(--sys-card); border: 1px solid var(--sys-line); border-radius: var(--radius-lg); margin-bottom: 20px; box-shadow: var(--shadow-xs); overflow: hidden; }
+  .juragan-dropdown-group .juragan-dropdown { margin-bottom: 0; box-shadow: none; border: none; border-radius: 0; }
+  .juragan-dropdown-group .juragan-dropdown + .juragan-dropdown { border-top: 1px solid var(--sys-line); }
   .juragan-dropdown-header { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; background: transparent; border-radius: 0; text-align: left; }
   .juragan-dropdown-header .jd-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 700; color: var(--brand-ink); }
   .juragan-dropdown-header .jd-icon-warn { color: var(--sys-warning); font-size: 16px; }
@@ -492,42 +499,46 @@
     <div class="juragan-section">
       <div class="juragan-section-title">Beres hari ini</div>
       <div class="juragan-checklist">
-        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Aktifkan Quick Capture — Ide &amp; Task</div>
-        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Fix Share ke GitJournal</div>
-        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Deploy MD Keep ke Vercel</div>
-        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Sinkron device kedua berhasil</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Proposal Layananmu selesai dikirim ke klien</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Update tampilan Towing Master selesai</div>
+        <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Versi terbaru MD Keep berhasil tayang</div>
+        <details class="juragan-check-more">
+          <summary>Lihat 1 pekerjaan lainnya</summary>
+          <div class="juragan-check-item"><i class="bi bi-check-circle-fill"></i> Data KlikSumenep sudah tersinkron ke semua perangkat</div>
+        </details>
       </div>
     </div>
 
-        <div class="juragan-dropdown" id="juraganAttentionDropdown">
-      <button class="juragan-dropdown-header">
-        <span class="jd-title"><i class="bi bi-exclamation-triangle-fill jd-icon-warn"></i> Perlu perhatian <span class="jd-count">1</span></span>
-        <i class="bi bi-chevron-down jd-chev"></i>
-      </button>
-      <div class="juragan-dropdown-body">
-        <div class="juragan-decision-card">
-          <div class="heading"><i class="bi bi-exclamation-triangle-fill"></i> Butuh keputusan Bang</div>
-          <p>Markdown Cleaner (Minggu 4) butuh panggilan ke Claude API dari dalam app — perlu API key tersimpan di app.</p>
-          <div class="reco">Rekomendasi: mulai dari Copy as AI Prompt dulu (nggak butuh API key), Markdown Cleaner belakangan.</div>
-          <div class="juragan-decision-actions">
-            <button class="btn-primary" disabled title="Dummy — belum aktif">Setujui</button>
-            <button class="btn-outline-danger" disabled title="Dummy — belum aktif">Tolak</button>
-            <button class="btn-ghost" disabled title="Dummy — belum aktif">Revisi</button>
+       <div class="juragan-dropdown-group">
+      <div class="juragan-dropdown" id="juraganAttentionDropdown">
+        <button class="juragan-dropdown-header">
+          <span class="jd-title"><i class="bi bi-exclamation-triangle-fill jd-icon-warn"></i> Perlu perhatian <span class="jd-count">1</span></span>
+          <i class="bi bi-chevron-down jd-chev"></i>
+        </button>
+        <div class="juragan-dropdown-body">
+          <div class="juragan-decision-card">
+            <div class="heading"><i class="bi bi-exclamation-triangle-fill"></i> Butuh keputusan Bang</div>
+            <p>Markdown Cleaner (Minggu 4) butuh panggilan ke Claude API dari dalam app, perlu API key tersimpan di app.</p>
+            <div class="reco">Rekomendasi: mulai dari Copy as AI Prompt dulu (nggak butuh API key), Markdown Cleaner belakangan.</div>
+            <div class="juragan-decision-actions">
+              <button class="btn-primary" disabled title="Dummy — belum aktif">Setujui</button>
+              <button class="btn-outline-danger" disabled title="Dummy — belum aktif">Tolak</button>
+              <button class="btn-ghost" disabled title="Dummy — belum aktif">Revisi</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="juragan-dropdown" id="juraganRadarDropdown">
-      <button class="juragan-dropdown-header">
-        <span class="jd-title"><i class="bi bi-signpost-2 jd-icon-ok"></i> Status project <span class="jd-summary">2 On Track · 1 Review</span></span>
-        <i class="bi bi-chevron-down jd-chev"></i>
-      </button>
-      <div class="juragan-dropdown-body">
-        <div class="juragan-radar">
-          <div class="juragan-radar-item"><span class="name">MD Keep</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
-          <div class="juragan-radar-item"><span class="name">KlikSumenep</span><span class="juragan-status-dot review">🟡 Review</span></div>
-          <div class="juragan-radar-item"><span class="name">Towing Master</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
+      <div class="juragan-dropdown" id="juraganRadarDropdown">
+        <button class="juragan-dropdown-header">
+          <span class="jd-title"><i class="bi bi-signpost-2 jd-icon-ok"></i> Status project <span class="jd-summary">2 On Track · 1 Review</span></span>
+          <i class="bi bi-chevron-down jd-chev"></i>
+        </button>
+        <div class="juragan-dropdown-body">
+          <div class="juragan-radar">
+            <div class="juragan-radar-item"><span class="name">MD Keep</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
+            <div class="juragan-radar-item"><span class="name">KlikSumenep</span><span class="juragan-status-dot review">🟡 Review</span></div>
+            <div class="juragan-radar-item"><span class="name">Towing Master</span><span class="juragan-status-dot ok">🟢 On Track</span></div>
+          </div>
         </div>
       </div>
     </div>
